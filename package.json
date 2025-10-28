@@ -1,0 +1,34 @@
+{
+  "name": "condenser",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Turns Steam into liquid",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:frontend": "vite frontend",
+    "dev:backend": "tsx watch backend/index.ts",
+    "start": "tsx backend/index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/ws": "^8.18.1",
+    "concurrently": "^8.0.0",
+    "puppeteer": "^24.26.1",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0",
+    "vite": "^5.0.0"
+  },
+  "keywords": [
+    "condenser",
+    "steam",
+    "plugins"
+  ],
+  "author": "kmturley",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.18.3"
+  }
+}
