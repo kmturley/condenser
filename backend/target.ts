@@ -33,22 +33,31 @@ async function pageSetup(page: Page) {
   });
   page.on('framenavigated', async (frame: Frame) => {
     if (frame === page.mainFrame() && frame.url().startsWith(TARGET_URL)) {
-      await page.waitForSelector('body');
       await page.evaluate(`
         (() => {
-          if (document.getElementById('condenser')) return;
+          const b = document.createElement('script');
+          b.id = 'react-refresh';
+          b.type = 'module';
+          b.innerHTML = 'import { injectIntoGlobalHook } from "${DOMAIN}/@react-refresh"; injectIntoGlobalHook(window); window.$RefreshReg$ = () => {}; window.$RefreshSig$ = () => (type) => type;';
+          document.head.appendChild(b);
 
           const a = document.createElement('script');
           a.id = 'vite';
           a.type = 'module';
           a.src = '${DOMAIN}/@vite/client';
           document.head.appendChild(a);
+        })()
+      `);
+      await page.waitForSelector('body');
+      await page.evaluate(`
+        (() => {
+          if (document.getElementById('condenser')) return;
 
           const el = document.createElement('script');
           el.id = 'condenser';
           el.type = 'module';
-          el.src = '${DOMAIN}/index.ts';
-          document.head.appendChild(el);
+          el.src = '${DOMAIN}/index.tsx';
+          document.body.appendChild(el);
         })()
       `);
     }

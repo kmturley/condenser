@@ -1,22 +1,19 @@
 import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 
 export default defineConfig({
+  plugins: [react({
+    include: "**/*.{jsx,tsx}"
+  })],
   root: '.',
+  build: {
+    outDir: '../dist'
+  },
   server: {
     port: 3000,
-    cors: true
-  },
-  build: {
-    lib: {
-      entry: 'index.ts',
-      name: 'Frontend',
-      fileName: 'frontend',
-      formats: ['iife']
-    },
-    rollupOptions: {
-      output: {
-        entryFileNames: 'index.js'
-      }
+    cors: true,
+    hmr: {
+      port: 3000
     }
   }
 });

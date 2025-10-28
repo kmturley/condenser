@@ -4,10 +4,11 @@
     "module": "ESNext",
     "lib": ["ES2020", "DOM"],
     "moduleResolution": "node",
+    "jsx": "react-jsx",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["index.ts"]
+  "include": ["index.tsx"]
 }
