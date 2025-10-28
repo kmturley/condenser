@@ -24,7 +24,13 @@ export async function startDiscovery() {
 async function pageSetup(page: Page) {
   page.setBypassCSP(true);
   await page.setRequestInterception(true);
-  page.on('request', interceptRequest);
+  page.on('request', (request: HTTPRequest) => {
+    if (request.url().startsWith(DOMAIN) || request.url().startsWith(TARGET_URL)) {
+      interceptRequest(request);
+    } else {
+      request.continue();
+    }
+  });
   page.on('framenavigated', async (frame: Frame) => {
     if (frame === page.mainFrame() && frame.url().startsWith(TARGET_URL)) {
       await page.waitForSelector('body');
@@ -50,54 +56,22 @@ async function pageSetup(page: Page) {
 }
 
 async function interceptRequest(request: HTTPRequest) {
-  if (request.url().startsWith(DOMAIN)) {
-    try {
-      const response = await fetch(request.url());
-      const headers = modifiedAccessControlHeaders(response.headers);
-      await request.respond({
-        status: response.status,
-        headers,
-        contentType: response.headers.get('content-type'),
-        body: await response.text(),
-      });
-      console.log('AccessControlHeaders', request.url());
-    } catch (error) {
-      console.error('Error intercepting request:', error);
-      await request.abort();
-    }
-    return;
-  } else if (request.url().startsWith(TARGET_URL)) {
-    try {
-      const response = await fetch(request.url());
-      const headers = modifyCSPHeader(response.headers);
-      await request.respond({
-        status: response.status,
-        headers,
-        contentType: response.headers.get('content-type'),
-        body: await response.text(),
-      });
-      console.log('CSP Headers', request.url());
-    } catch (error) {
-      console.error('Error intercepting request:', error);
-      await request.abort();
-    }
-  } else {
-    await request.continue();
+  try {
+    const response = await fetch(request.url());
+    const headers = updateHeaders(response.headers);
+    await request.respond({
+      status: response.status,
+      headers,
+      contentType: response.headers.get('content-type') || undefined,
+      body: await response.text(),
+    });
+  } catch (error) {
+    console.error('replaceHeaders error', error);
+    await request.abort();
   }
 }
 
-function modifiedAccessControlHeaders(
-  headers: Headers
-): Record<string, string> {
-  const modifiedHeaders: Record<string, string> = {};
-  headers.forEach((value, key) => {
-    modifiedHeaders[key] = value;
-  });
-  modifiedHeaders['access-control-allow-origin'] = '*';
-  return modifiedHeaders;
-}
-
-function modifyCSPHeader(headers: Headers): Record<string, string> {
+function updateHeaders(headers: Headers): Record<string, string> {
   const modifiedHeaders: Record<string, string> = {};
   headers.forEach((value, key) => {
     if (key.toLowerCase() === 'content-security-policy') {
@@ -109,5 +83,6 @@ function modifyCSPHeader(headers: Headers): Record<string, string> {
       modifiedHeaders[key] = value;
     }
   });
+  modifiedHeaders['access-control-allow-origin'] = '*';
   return modifiedHeaders;
 }
