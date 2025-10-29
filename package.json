@@ -10,6 +10,7 @@
     "dev:frontend": "vite frontend",
     "dev:backend": "tsx watch backend/index.ts",
     "start": "tsx backend/index.ts",
+    "steam": "/Applications/Steam.app/Contents/MacOS/steam_osx -dev",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "devDependencies": {

@@ -1,15 +1,34 @@
 import puppeteer, { Browser, Page, Target, HTTPRequest, Frame } from 'puppeteer';
 
+interface ChromeVersionInfo {
+  Browser: string;
+  'Protocol-Version': string;
+  'User-Agent': string;
+  'V8-Version': string;
+  'WebKit-Version': string;
+  webSocketDebuggerUrl: string;
+}
+
 const TARGET_URL: string = 'https://store.steampowered.com';
 const DOMAIN: string = 'http://localhost:3000';
 const CSP_ADDITIONS: string = 'ws://localhost:3000';
 
-export async function startDiscovery() {
-  const browser: Browser = await puppeteer.launch({
-    defaultViewport: null,
-    devtools: true,
-    headless: false,
-  });
+export async function startDiscovery(app = false) {
+  let browser: Browser;
+  if (app) {
+    // Connect to existing browser instance
+    const browserURL = `http://localhost:8080/json/version`;
+    const response = await fetch(browserURL);
+    const { webSocketDebuggerUrl } = await response.json() as ChromeVersionInfo;
+    browser = await puppeteer.connect({ browserWSEndpoint: webSocketDebuggerUrl });
+  } else {
+    browser = await puppeteer.launch({
+      defaultViewport: null,
+      devtools: true,
+      headless: false,
+    });
+  }
+
   browser.on('targetcreated', async (target: Target) => {
     if (target.type() === 'page') {
       const page = await target.page();
