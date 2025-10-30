@@ -7,6 +7,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:app": "concurrently \"npm run dev:frontend\" \"npm run dev:backend -- --app\"",
     "dev:frontend": "vite frontend",
     "dev:backend": "tsx watch backend/index.ts",
     "start": "tsx backend/index.ts",
