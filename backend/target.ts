@@ -43,15 +43,23 @@ export async function startDiscovery(app = false) {
     }
   });
   const pages = await browser.pages();
-  const page = pages.find(page => page.url().startsWith(TARGET_URL));
-  if (page)  {
-    console.log('Found existing page', page.url());
-    await pageSetup(page);
-  } else {
-    console.log('No page found, navigate instead', TARGET_URL);
-    await pageSetup(pages[0]);
-    await pages[0].goto(TARGET_URL);
+  const page = await findPage(pages);
+  await pageSetup(page);
+  if (!app && !page.url().startsWith(TARGET_URL)) {
+    await page.goto(TARGET_URL);
   }
+}
+
+async function findPage(pages: Page[]): Promise<Page> {
+  const matches = ['Gamepad', 'Big Picture', 'Steam'];
+  for (const match of matches) {
+    for (const page of pages) {
+      const title = await page.title();
+      console.log(title.includes(match), title, match);
+      if (title.includes(match)) return page;
+    }
+  }
+  return pages[0];
 }
 
 async function pageSetup(page: Page) {
@@ -140,4 +148,10 @@ function updateHeaders(headers: Headers): Record<string, string> {
   });
   modifiedHeaders['access-control-allow-origin'] = '*';
   return modifiedHeaders;
+}
+
+if (process.argv.includes('--app')) {
+  startDiscovery(true);
+} else {
+  startDiscovery();
 }

@@ -20,3 +20,5 @@ export function startServer() {
     });
   });
 }
+
+startServer();

@@ -6,12 +6,14 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
-    "dev:app": "concurrently \"npm run dev:frontend\" \"npm run dev:backend -- --app\"",
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend:server\" \"npm run dev:backend:target\"",
+    "dev:app": "concurrently \"npm run dev:frontend\" \"npm run dev:backend:server\" \"npm run dev:backend:target -- --app\"",
     "dev:frontend": "vite frontend",
-    "dev:backend": "tsx watch backend/index.ts",
+    "dev:backend:server": "tsx watch backend/server.ts",
+    "dev:backend:target": "tsx watch backend/target.ts",
     "start": "tsx backend/index.ts",
     "steam": "/Applications/Steam.app/Contents/MacOS/steam_osx -dev",
+    "steam:game": "/Applications/Steam.app/Contents/MacOS/steam_osx -dev -gamepadui",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "devDependencies": {
