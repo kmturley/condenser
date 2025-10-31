@@ -1,4 +1,5 @@
 import puppeteer, { Browser, Page, Target, HTTPRequest, Frame } from 'puppeteer';
+import { SERVER_PORT } from './server';
 
 interface ChromeVersionInfo {
   Browser: string;
@@ -11,55 +12,70 @@ interface ChromeVersionInfo {
 
 const TARGET_URL: string = 'https://store.steampowered.com';
 const DOMAIN: string = 'http://localhost:3000';
-const CSP_ADDITIONS: string = 'ws://localhost:3000';
+// Ports to scan for remote debugging
+// 8080 Steam app
+// 9222 Chrome
+const DEBUG_PORTS: number[] = [8080, 9222];
 
-export async function startDiscovery(app = false) {
-  let browser: Browser;
-  if (app) {
-    console.log('Connect', 'http://localhost:8080');
-    const browserURL = `http://localhost:8080/json/version`;
-    const response = await fetch(browserURL);
-    const { webSocketDebuggerUrl } = await response.json() as ChromeVersionInfo;
-    browser = await puppeteer.connect({
-      browserWSEndpoint: webSocketDebuggerUrl,
-      defaultViewport: null,
-    });
-    console.log('Connected', webSocketDebuggerUrl);
-  } else {
-    console.log('Launch', 'http://localhost:3000');
-    browser = await puppeteer.launch({
-      defaultViewport: null,
-      devtools: true,
-      headless: false,
-    });
-    console.log('Launched', browser.wsEndpoint());
+export async function startDiscovery() {
+  const browsers = await discoverAllBrowsers();
+  if (browsers.length === 0) {
+    console.log('No debugger found, launch a browser with remote debugging enabled or the Steam app');
+    return;
   }
 
-  browser.on('targetcreated', async (target: Target) => {
-    console.log('Target', target.url());
-    if (target.type() === 'page') {
-      const page = await target.page();
-      if (page) await pageSetup(page);
+  for (const browser of browsers) {
+    browser.on('targetcreated', async (target: Target) => {
+      console.log('Target', target.url());
+      if (target.type() === 'page') {
+        const page = await target.page();
+        if (page) await pageSetup(page);
+      }
+    });
+    
+    const pages = await browser.pages();
+    const matchingPages = await findAllPages(pages, ['Welcome to Steam', 'Steam Big Picture Mode']);
+    for (const page of matchingPages) {
+      await pageSetup(page);
     }
-  });
-  const pages = await browser.pages();
-  const page = await findPage(pages);
-  await pageSetup(page);
-  if (!app && !page.url().startsWith(TARGET_URL)) {
-    await page.goto(TARGET_URL);
   }
 }
 
-async function findPage(pages: Page[]): Promise<Page> {
-  const matches = ['Gamepad', 'Big Picture', 'Steam'];
-  for (const match of matches) {
-    for (const page of pages) {
-      const title = await page.title();
-      console.log(title.includes(match), title, match);
-      if (title.includes(match)) return page;
+async function discoverAllBrowsers(): Promise<Browser[]> {
+  const browsers: Browser[] = [];
+  for (const port of DEBUG_PORTS) {
+    try {
+      console.log(`Scanning port ${port}...`);
+      const browserURL = `http://localhost:${port}/json/version`;
+      const response = await fetch(browserURL);
+      const { webSocketDebuggerUrl } = await response.json() as ChromeVersionInfo;
+      const browser = await puppeteer.connect({
+        browserWSEndpoint: webSocketDebuggerUrl,
+        defaultViewport: null,
+      });
+      console.log(`Connected to browser on port ${port}`);
+      browsers.push(browser);
+    } catch (error) {
+      continue;
     }
   }
-  return pages[0];
+  return browsers;
+}
+
+async function findAllPages(pages: Page[], matches: string[]): Promise<Page[]> {
+  const matchingPages: Page[] = [];
+  for (const page of pages) {
+    const title = await page.title();
+    console.log(`Page: ${title}`);
+    for (const match of matches) {
+      if (title === match) {
+        console.log(`Page match: ${title}`);
+        matchingPages.push(page);
+        break;
+      }
+    }
+  }
+  return matchingPages.length > 0 ? matchingPages : pages;
 }
 
 async function pageSetup(page: Page) {
@@ -140,7 +156,7 @@ function updateHeaders(headers: Headers): Record<string, string> {
     if (key.toLowerCase() === 'content-security-policy') {
       modifiedHeaders[key] = value.replace(
         `connect-src 'self'`,
-        `connect-src 'self' ${CSP_ADDITIONS}`
+        `connect-src 'self' ${SERVER_PORT}`
       );
     } else {
       modifiedHeaders[key] = value;
@@ -150,8 +166,4 @@ function updateHeaders(headers: Headers): Record<string, string> {
   return modifiedHeaders;
 }
 
-if (process.argv.includes('--app')) {
-  startDiscovery(true);
-} else {
-  startDiscovery();
-}
+startDiscovery();

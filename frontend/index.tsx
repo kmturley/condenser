@@ -25,7 +25,7 @@ const App: React.FC = () => {
 
   const handleClick = () => {
     if (ws) {
-      ws.send('Client clicked');
+      ws.send(JSON.stringify({ action: 'click' }));
     }
   };
 

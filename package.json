@@ -6,14 +6,16 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend:server\" \"npm run dev:backend:target\"",
-    "dev:app": "concurrently \"npm run dev:frontend\" \"npm run dev:backend:server\" \"npm run dev:backend:target -- --app\"",
-    "dev:frontend": "vite frontend",
-    "dev:backend:server": "tsx watch backend/server.ts",
-    "dev:backend:target": "tsx watch backend/target.ts",
+    "app:browser": "tsx watch backend/browser.ts",
+    "app:steam": "/Applications/Steam.app/Contents/MacOS/steam_osx -dev",
+    "app:steam-gamepad": "/Applications/Steam.app/Contents/MacOS/steam_osx -dev -gamepadui",
+    "apps": "concurrently \"npm run app:browser\" \"npm run app:steam\"",
+    "dev": "npm run services",
+    "service:frontend": "vite frontend",
+    "service:server": "tsx watch backend/index.ts",
+    "service:target": "tsx watch backend/target.ts",
+    "services": "concurrently \"npm run service:frontend\" \"npm run service:server\" \"npm run service:target\"",
     "start": "tsx backend/index.ts",
-    "steam": "/Applications/Steam.app/Contents/MacOS/steam_osx -dev",
-    "steam:game": "/Applications/Steam.app/Contents/MacOS/steam_osx -dev -gamepadui",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "devDependencies": {

@@ -18,31 +18,33 @@ A development tool that injects React components into Steam web pages using Pupp
 
 ## Usage
 
-### Development Mode (Launch Browser)
+### Quick Start
 
     npm run dev
 
-This will:
-- Start Vite dev server on `http://localhost:3000`
-- Start WebSocket server on `ws://localhost:3001`
-- Launch Chrome browser and navigate to Steam store
-- Inject React components with hot reload
+This starts all services and automatically discovers any running browser/Steam instance to inject into.
 
-### App Mode (Connect to Steam App)
+### App Commands
 
-First, launch Steam with debugging enabled:
+    npm run app:browser          # Launch browser in development mode
+    npm run app:steam            # Launch Steam app in development mode  
+    npm run app:steam-gamepad    # Launch Steam app with gamepad UI
+    npm run apps                 # Launch browser and Steam simultaneously
 
-    npm run steam
+### Service Commands
 
-Then run the dev app mode:
+    npm run service:frontend     # Start Vite dev server (http://localhost:3000)
+    npm run service:server      # Start WebSocket server (ws://localhost:3001)
+    npm run service:target     # Start target discovery and injection
+    npm run services             # Start all services simultaneously
 
-    npm run dev:app
+### How It Works
 
-This will:
-- Start Vite dev server on `http://localhost:3000`
-- Start WebSocket server on `ws://localhost:3001`
-- Connect to existing Steam browser instance on port 8080
-- Inject React components into Steam store pages
+The target service automatically:
+- Scans multiple debug ports (8080, 9222, 9223, 9224) for running browsers
+- Discovers Steam-related pages by title and URL matching
+- Injects React components with hot reload into discovered targets
+- Falls back to launching a new browser if none found
 
 ## Directory structure
 
