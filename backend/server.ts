@@ -4,7 +4,7 @@ export const SERVER_PORT: number = 3001;
 export const SERVER_URL: string = `ws://localhost:${SERVER_PORT}`;
 
 export function startServer() {
-  const wss = new WebSocketServer({ port: SERVER_PORT });
+  const wss = new WebSocketServer({ port: SERVER_PORT, host: '0.0.0.0' });
   console.log('Server.started', SERVER_URL);
   let requestCount = 0;
   const clients = new Set<WebSocket>();

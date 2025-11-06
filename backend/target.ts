@@ -1,5 +1,6 @@
 import puppeteer, { Browser, Page, Target, HTTPRequest, Frame } from 'puppeteer';
 import { SERVER_PORT } from './server';
+import { networkInterfaces } from 'os';
 
 interface ChromeVersionInfo {
   Browser: string;
@@ -10,12 +11,36 @@ interface ChromeVersionInfo {
   webSocketDebuggerUrl: string;
 }
 
-const TARGET_URL: string = 'https://store.steampowered.com';
-const DOMAIN: string = 'http://localhost:3000';
-// Ports to scan for remote debugging
+const TARGET_URL: string = 'https://store.steampowered.com/';
+
+function getLocalIP(): string {
+  const nets = networkInterfaces();
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name]!) {
+      if (net.family === 'IPv4' && !net.internal) {
+        return net.address;
+      }
+    }
+  }
+  return 'localhost';
+}
+
+function getDomain(debugUrl: string): string {
+  const isLocalhost = debugUrl.includes('localhost') || debugUrl.includes('127.0.0.1');
+  return isLocalhost ? 'http://localhost:3000' : `http://${getLocalIP()}:3000`;
+}
+// URLs to scan for remote debugging
 // 8080 Steam app
 // 9222 Chrome
-const DEBUG_PORTS: number[] = [8080, 9222];
+const DEBUG_URLS: string[] = [
+  'http://localhost:8080',
+  'http://localhost:9222',
+  'http://steamdeck:8081'
+];
+const TARGET_PAGES: string[] = [
+  'SharedJSContext',
+  'Welcome to Steam',
+];
 
 export async function startDiscovery() {
   const browsers = await discoverAllBrowsers();
@@ -24,37 +49,38 @@ export async function startDiscovery() {
     return;
   }
 
-  for (const browser of browsers) {
+  for (const { browser, domain } of browsers) {
     browser.on('targetcreated', async (target: Target) => {
       console.log('Target', target.url());
       if (target.type() === 'page') {
         const page = await target.page();
-        if (page) await pageSetup(page);
+        if (page) await pageSetup(page, domain);
       }
     });
     
     const pages = await browser.pages();
-    const matchingPages = await findAllPages(pages, ['Welcome to Steam', 'Steam Big Picture Mode']);
+    const matchingPages = await findAllPages(pages, TARGET_PAGES);
     for (const page of matchingPages) {
-      await pageSetup(page);
+      await pageSetup(page, domain);
     }
   }
 }
 
-async function discoverAllBrowsers(): Promise<Browser[]> {
-  const browsers: Browser[] = [];
-  for (const port of DEBUG_PORTS) {
+async function discoverAllBrowsers(): Promise<Array<{ browser: Browser, domain: string }>> {
+  const browsers: Array<{ browser: Browser, domain: string }> = [];
+  for (const debugUrl of DEBUG_URLS) {
     try {
-      console.log(`Scanning port ${port}...`);
-      const browserURL = `http://localhost:${port}/json/version`;
+      console.log(`Scanning ${debugUrl}...`);
+      const browserURL = `${debugUrl}/json/version`;
       const response = await fetch(browserURL);
       const { webSocketDebuggerUrl } = await response.json() as ChromeVersionInfo;
       const browser = await puppeteer.connect({
         browserWSEndpoint: webSocketDebuggerUrl,
         defaultViewport: null,
       });
-      console.log(`Connected to browser on port ${port}`);
-      browsers.push(browser);
+      const domain = getDomain(debugUrl);
+      console.log(`Connected to browser at ${debugUrl}, using domain ${domain}`);
+      browsers.push({ browser, domain });
     } catch (error) {
       continue;
     }
@@ -78,59 +104,53 @@ async function findAllPages(pages: Page[], matches: string[]): Promise<Page[]> {
   return matchingPages.length > 0 ? matchingPages : pages;
 }
 
-async function pageSetup(page: Page) {
+function injectScript(domain: string) {
+  return `
+    (() => {
+      try {
+        if (window.condenserHasLoaded) return;
+        window.condenserHasLoaded = true;
+        (async () => {
+          try {
+            await import('${domain}/@react-refresh').then(module => {
+              module.injectIntoGlobalHook(window);
+              window.$RefreshReg$ = () => {};
+              window.$RefreshSig$ = () => (type) => type;
+            });
+            await import('${domain}/@vite/client');
+            await import('${domain}/index.tsx');
+          } catch (e) {
+            console.error('Condenser injection error:', e);
+            window.location.reload();
+          }
+        })();
+      } catch (e) {
+        console.error('Condenser setup error:', e);
+      }
+    })()
+  `;
+}
+
+async function pageSetup(page: Page, domain: string) {
   console.log('Setup', page.url());
   page.setBypassCSP(true);
   await page.setRequestInterception(true);
   page.on('request', (request: HTTPRequest) => {
-    if (request.url().startsWith(DOMAIN) || request.url().startsWith(TARGET_URL)) {
+    if (request.url().startsWith(domain) || request.url() === TARGET_URL) {
       interceptRequest(request);
     } else {
       request.continue();
     }
   });
-  page.on('framenavigated', async (frame: Frame) => {
-    if (frame === page.mainFrame() && frame.url().startsWith(TARGET_URL)) {
-      pageInjectScript(page);
-    }
+
+  const client = await page.createCDPSession();
+  await client.send('Page.enable');
+  client.on('Page.domContentEventFired', async () => {
+    console.log('DOM content loaded, injecting scripts...');
+    await page.evaluate(injectScript(domain));
   });
-  pageInjectScript(page);
-}
 
-async function pageInjectScript(page: Page) {
-  console.log('Inject', page.url());
-  try {
-    await page.evaluate(`
-      (() => {
-        if (document.getElementById('react-refresh')) return;
-
-        const b = document.createElement('script');
-        b.id = 'react-refresh';
-        b.type = 'module';
-        b.innerHTML = 'import { injectIntoGlobalHook } from "${DOMAIN}/@react-refresh"; injectIntoGlobalHook(window); window.$RefreshReg$ = () => {}; window.$RefreshSig$ = () => (type) => type;';
-        document.head.appendChild(b);
-
-        const a = document.createElement('script');
-        a.id = 'vite';
-        a.type = 'module';
-        a.src = '${DOMAIN}/@vite/client';
-        document.head.appendChild(a);
-      })()
-    `);
-    await page.waitForSelector('body');
-    await page.evaluate(`
-      (() => {
-        if (document.getElementById('condenser')) return;
-
-        const el = document.createElement('script');
-        el.id = 'condenser';
-        el.type = 'module';
-        el.src = '${DOMAIN}/index.tsx';
-        document.body.appendChild(el);
-      })()
-    `);
-  } catch (error) {
-  }
+  await page.evaluate(injectScript(domain));
 }
 
 async function interceptRequest(request: HTTPRequest) {
