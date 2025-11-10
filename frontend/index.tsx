@@ -10,7 +10,24 @@ const App: React.FC = () => {
     console.log('Condenser loaded!');
     document.body.style.border = '1px solid red';
 
-    const websocket = new WebSocket('ws://localhost:3001');
+    // Connect to development server WebSocket
+    const isSecure = window.location.protocol === 'https:';
+    const protocol = isSecure ? 'wss:' : 'ws:';
+    // Always connect to localhost for development, or detect dev server IP
+    const devServerHost = 'localhost'; // Could be made configurable
+    const websocketUrl = `${protocol}//${devServerHost}:3001`;
+    console.log('Connecting to WebSocket:', websocketUrl);
+    
+    const websocket = new WebSocket(websocketUrl);
+    
+    websocket.onopen = () => {
+      console.log('WebSocket connected');
+    };
+    
+    websocket.onerror = (error) => {
+      console.log('WebSocket error:', error);
+      console.log('Try visiting https://localhost:3001 in your browser and accepting the certificate');
+    };
     
     websocket.onmessage = (event) => {
       const data = JSON.parse(event.data);

@@ -1,6 +1,8 @@
 import puppeteer, { Browser, Page, Target, HTTPRequest, Frame } from 'puppeteer';
 import { SERVER_PORT } from './server';
 import { networkInterfaces } from 'os';
+import { readFileSync, existsSync } from 'fs';
+import { join } from 'path';
 
 interface ChromeVersionInfo {
   Browser: string;
@@ -27,7 +29,12 @@ function getLocalIP(): string {
 
 function getDomain(debugUrl: string): string {
   const isLocalhost = debugUrl.includes('localhost') || debugUrl.includes('127.0.0.1');
-  return isLocalhost ? 'http://localhost:3000' : `http://${getLocalIP()}:3000`;
+  const hasSSL = existsSync(join(process.cwd(), 'certs', 'cert.pem'));
+  const protocol = hasSSL ? 'https' : 'http';
+  
+  return isLocalhost 
+    ? `${protocol}://localhost:3000` 
+    : `${protocol}://${getLocalIP()}:3000`;
 }
 // URLs to scan for remote debugging
 // 8080 Steam app
@@ -156,7 +163,21 @@ async function pageSetup(page: Page, domain: string) {
 async function interceptRequest(request: HTTPRequest) {
   console.log('Intercept', request.url());
   try {
+    // Temporarily disable SSL verification for self-signed certificates
+    const originalRejectUnauthorized = process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+    if (request.url().startsWith('https:')) {
+      process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+    }
+    
     const response = await fetch(request.url());
+    
+    // Restore original setting
+    if (originalRejectUnauthorized !== undefined) {
+      process.env.NODE_TLS_REJECT_UNAUTHORIZED = originalRejectUnauthorized;
+    } else {
+      delete process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+    }
+    
     const headers = updateHeaders(response.headers);
     await request.respond({
       status: response.status,
@@ -176,7 +197,7 @@ function updateHeaders(headers: Headers): Record<string, string> {
     if (key.toLowerCase() === 'content-security-policy') {
       modifiedHeaders[key] = value.replace(
         `connect-src 'self'`,
-        `connect-src 'self' ${SERVER_PORT}`
+        `connect-src 'self' ws://localhost:3000 wss://localhost:3000 ws://localhost:3001 wss://localhost:3001`
       );
     } else {
       modifiedHeaders[key] = value;

@@ -16,6 +16,7 @@
     "service:target": "tsx watch backend/target.ts",
     "services": "concurrently \"npm run service:frontend\" \"npm run service:server\" \"npm run service:target\"",
     "start": "tsx backend/index.ts",
+    "certs": "mkdir -p certs && (command -v mkcert >/dev/null 2>&1 && mkcert -install && mkcert -key-file certs/key.pem -cert-file certs/cert.pem localhost 127.0.0.1 ::1) || (echo 'mkcert not found, using openssl...' && openssl req -x509 -newkey rsa:4096 -keyout certs/key.pem -out certs/cert.pem -days 365 -nodes -subj '/C=US/ST=State/L=City/O=Organization/CN=localhost' -addext 'subjectAltName=DNS:localhost,DNS:*.localhost,IP:127.0.0.1,IP:0.0.0.0')",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "devDependencies": {

@@ -20,9 +20,13 @@ A development tool that injects React components into Steam web pages using Pupp
 
 ### Quick Start
 
-    npm run dev
+Generate locally trusted certificates for https/wss local server:
 
-This starts all services and automatically discovers any running browser/Steam instance to inject into.
+    npm run certs
+
+Start all services and automatically discover any running browser/Steam instance to inject into:
+
+    npm run dev
 
 ### App Commands
 
