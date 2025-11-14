@@ -4,6 +4,9 @@
 
 A development tool that injects React components into Steam web pages using Puppeteer and WebSocket communication.
 
+![Condenser](/condenser-screenshot.jpg)
+Condenser injected into Browser, App and Steam Deck UI.
+
 ## Features
 
 - **Browser Automation**: Uses Puppeteer to control Chrome/Steam browser instances
