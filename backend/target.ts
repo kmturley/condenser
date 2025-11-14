@@ -45,7 +45,7 @@ const DEBUG_URLS: string[] = [
   'http://steamdeck:8081'
 ];
 const TARGET_PAGES: string[] = [
-  'SharedJSContext',
+  'Steam Big Picture Mode',
   'Welcome to Steam',
 ];
 

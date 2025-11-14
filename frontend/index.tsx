@@ -1,4 +1,6 @@
 /// <reference types="vite/client" />
+
+declare const __DEV_SERVER_IP__: string;
 import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 
@@ -13,8 +15,8 @@ const App: React.FC = () => {
     // Connect to development server WebSocket
     const isSecure = window.location.protocol === 'https:';
     const protocol = isSecure ? 'wss:' : 'ws:';
-    // Always connect to localhost for development, or detect dev server IP
-    const devServerHost = 'localhost'; // Could be made configurable
+    // Use development server IP passed from Vite config
+    const devServerHost = typeof __DEV_SERVER_IP__ !== 'undefined' ? __DEV_SERVER_IP__ : 'localhost';
     const websocketUrl = `${protocol}//${devServerHost}:3001`;
     console.log('Connecting to WebSocket:', websocketUrl);
     
@@ -26,7 +28,7 @@ const App: React.FC = () => {
     
     websocket.onerror = (error) => {
       console.log('WebSocket error:', error);
-      console.log('Try visiting https://localhost:3001 in your browser and accepting the certificate');
+      console.log(`Try visiting https://${devServerHost}:3001 in your browser and accepting the certificate`);
     };
     
     websocket.onmessage = (event) => {
