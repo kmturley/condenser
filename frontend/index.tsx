@@ -33,8 +33,11 @@ const App: React.FC = () => {
     
     websocket.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      console.log('Client.message', data.count);
-      setCount(data.count);
+      console.log('Client.message', data);
+      // Handle example plugin messages
+      if (data.namespace === 'example' && data.type === 'count') {
+        setCount(data.payload.count);
+      }
     };
 
     setWs(websocket);
@@ -44,7 +47,11 @@ const App: React.FC = () => {
 
   const handleClick = () => {
     if (ws) {
-      ws.send(JSON.stringify({ action: 'click' }));
+      ws.send(JSON.stringify({ 
+        namespace: 'example', 
+        type: 'click', 
+        payload: {} 
+      }));
     }
   };
 

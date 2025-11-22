@@ -35,7 +35,7 @@ export default defineConfig({
   })],
   root: '.',
   build: {
-    outDir: '../dist'
+    outDir: 'dist'
   },
   define: {
     __DEV_SERVER_IP__: JSON.stringify(getDevServerIP())

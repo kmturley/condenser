@@ -39,7 +39,7 @@ Generate trusted certificates for https/wss local server:
 ### Service Commands
 
     npm run service:frontend    # Start Vite dev server (http://localhost:3000)
-    npm run service:server      # Start WebSocket server (ws://localhost:3001)
+    npm run service:backend     # Start WebSocket server (ws://localhost:3001)
     npm run service:target      # Start target discovery and injection
     npm run services            # Start all services simultaneously
 
@@ -96,8 +96,99 @@ Condenser will automatically discover and inject into Steam Deck's browser when 
 
 ## Directory structure
 
-    /backend    -> Puppeteer automation and WebSocket server
-    /frontend   -> Vite dev server and React components injected into Steam pages.
+    /core           -> Plugin system infrastructure
+      /backend      -> CondenserService, PluginManager, BrowserConnector, MessageRouter
+      /frontend     -> CondenserFrontend base class, WebSocketClient, PluginRenderer
+      /shared       -> Types and interfaces
+    /plugins        -> Individual plugins
+      /example      -> Example plugin (Backend.ts, Frontend.tsx, Config.ts)
+    /backend        -> Main entry point (index.ts)
+    /frontend       -> Vite dev server and plugin loader
+
+## Plugin Development
+
+### Creating a Plugin
+
+1. Create a new directory in `/plugins/your-plugin-name/`
+2. Create three files:
+
+**Config.ts** - Plugin configuration:
+```typescript
+import { PluginConfig } from '../../core/shared/types';
+
+export const config: PluginConfig = {
+  name: 'your-plugin-name',
+  namespace: 'yourPlugin',
+  targetPages: [
+    { url: /store\.steampowered\.com/ },
+    { title: 'Steam Big Picture Mode' }
+  ],
+  mountSelector: '#content'
+};
+```
+
+**Backend.ts** - Server-side logic:
+```typescript
+import { CondenserBackend } from '../../core/backend/CondenserBackend';
+import { config } from './Config';
+
+export class Backend extends CondenserBackend {
+  constructor() {
+    super(config);
+    this.registerMessage('getData', this.handleGetData.bind(this));
+  }
+  
+  handleGetData() {
+    return { message: 'Hello from your plugin!' };
+  }
+}
+```
+
+**Frontend.tsx** - React component:
+```typescript
+import React from 'react';
+import { CondenserFrontend } from '../../core/frontend/CondenserFrontend';
+import { config } from './Config';
+
+export class Frontend extends CondenserFrontend {
+  constructor() {
+    super(config);
+  }
+  
+  render() {
+    return <div>Your Plugin UI</div>;
+  }
+}
+```
+
+### Plugin Features
+
+- **Automatic Discovery**: Plugins are automatically discovered from `/plugins` folder
+- **Page Matching**: Target specific Steam pages using URL patterns, titles, or selectors
+- **Message System**: Namespaced WebSocket communication between backend and frontend
+- **React Integration**: Full React support with hot reload during development
+- **State Management**: Plugin-specific state isolation
+- **Certificate Support**: Automatic HTTPS/WSS when certificates are available
+
+## Plugin System Architecture
+
+The new plugin system provides:
+
+- **CondenserService**: Main system service that manages all plugins
+- **Plugin Isolation**: Each plugin runs in its own namespace
+- **Hot Reload**: Development-friendly with automatic reloading
+- **Cross-Platform**: Works on local development and Steam Deck
+- **Extensible**: Easy to add new plugins without modifying core system
+
+## System Status
+
+✅ **Production Ready:**
+- Complete plugin system with <50 lines per plugin
+- Namespaced messaging preventing conflicts
+- State management and persistence
+- Health monitoring and debugging tools
+- Cross-platform support (local + Steam Deck)
+- Certificate management automation
 
 ## Contact
 
