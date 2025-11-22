@@ -63,9 +63,11 @@ export abstract class CondenserFrontend implements ICondenserFrontend {
       return this.config.serverUrl;
     }
     
-    // Auto-detect server URL based on current page
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.hostname;
-    return `${protocol}//${host}:3001`;
+    // Auto-detect server URL like original prototype
+    const isSecure = window.location.protocol === 'https:';
+    const protocol = isSecure ? 'wss:' : 'ws:';
+    // Use development server IP passed from Vite config
+    const devServerHost = typeof (window as any).__DEV_SERVER_IP__ !== 'undefined' ? (window as any).__DEV_SERVER_IP__ : 'localhost';
+    return `${protocol}//${devServerHost}:3001`;
   }
 }

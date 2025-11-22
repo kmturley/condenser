@@ -1,86 +1,26 @@
 /// <reference types="vite/client" />
 
-declare const __DEV_SERVER_IP__: string;
-import React, { useState, useEffect } from 'react';
-import { createRoot } from 'react-dom/client';
+import { PluginLoader } from '../core/frontend/PluginLoader';
 
-const App: React.FC = () => {
-  const [count, setCount] = useState(0);
-  const [ws, setWs] = useState<WebSocket | null>(null);
+console.log('Condenser plugin system initializing...');
 
-  useEffect(() => {
-    console.log('Condenser loaded 2!');
-    document.body.style.border = '1px solid red';
+// Initialize plugin system
+const pluginLoader = new PluginLoader();
 
-    // Connect to development server WebSocket
-    const isSecure = window.location.protocol === 'https:';
-    const protocol = isSecure ? 'wss:' : 'ws:';
-    // Use development server IP passed from Vite config
-    const devServerHost = typeof __DEV_SERVER_IP__ !== 'undefined' ? __DEV_SERVER_IP__ : 'localhost';
-    const websocketUrl = `${protocol}//${devServerHost}:3001`;
-    console.log('Connecting to WebSocket:', websocketUrl);
-    
-    const websocket = new WebSocket(websocketUrl);
-    
-    websocket.onopen = () => {
-      console.log('WebSocket connected');
-      // Send init message to get current count
-      websocket.send(JSON.stringify({ 
-        namespace: 'example', 
-        type: 'init', 
-        payload: {} 
-      }));
-    };
-    
-    websocket.onerror = (error) => {
-      console.log('WebSocket error:', error);
-      console.log(`Try visiting https://${devServerHost}:3001 in your browser and accepting the certificate`);
-    };
-    
-    websocket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      console.log('Client.message', data);
-      // Handle example plugin messages
-      if (data.namespace === 'example' && data.type === 'count') {
-        setCount(data.payload.count);
-      }
-    };
+// Load plugins when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM ready, loading plugins...');
+    pluginLoader.loadPlugins();
+  });
+} else {
+  console.log('DOM already ready, loading plugins...');
+  pluginLoader.loadPlugins();
+}
 
-    setWs(websocket);
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+  pluginLoader.unloadAll();
+});
 
-    return () => websocket.close();
-  }, []);
-
-  const handleClick = () => {
-    if (ws) {
-      ws.send(JSON.stringify({ 
-        namespace: 'example', 
-        type: 'click', 
-        payload: {} 
-      }));
-    }
-  };
-
-  return (
-    <div>
-      <h1>Condenser Frontend</h1>
-      <button 
-        onClick={handleClick}
-        style={{
-          position: 'fixed',
-          top: '10px',
-          right: '10px',
-          zIndex: 1000
-        }}
-      >
-        Send Request {count > 0 && `(${count})`}
-      </button>
-    </div>
-  );
-};
-
-const container = document.createElement('div');
-container.id = 'react-app';
-document.body.appendChild(container);
-const root = createRoot(container);
-root.render(<App />);
+console.log('Condenser plugin system initialized');

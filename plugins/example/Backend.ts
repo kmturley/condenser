@@ -9,6 +9,7 @@ export class Backend extends CondenserBackend {
     this.registerMessage('reset', this.handleReset.bind(this));
     this.registerMessage('click', this.handleClick.bind(this));
     this.registerMessage('init', this.handleInit.bind(this));
+    console.log('Example PLugin Backend initialized');
   }
   
   private count = 0;

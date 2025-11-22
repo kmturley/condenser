@@ -38,9 +38,14 @@ export class PluginLoader {
     if (this.loadedPlugins.has(pluginName)) return;
 
     try {
-      // Dynamic import of plugin frontend
-      const pluginModule = await import(/* @vite-ignore */ `/plugins/${pluginName}/Frontend.tsx`);
-      const { Frontend } = pluginModule;
+      // Use static plugin registry
+      const { getPluginFrontend } = await import('./PluginRegistry');
+      const Frontend = getPluginFrontend(pluginName);
+      
+      if (!Frontend) {
+        console.error(`Plugin not found in registry: ${pluginName}`);
+        return;
+      }
       
       const frontend = new Frontend();
       await frontend.connect();
