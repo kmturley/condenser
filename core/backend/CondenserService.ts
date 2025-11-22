@@ -23,6 +23,18 @@ export class CondenserService {
 
   async start(): Promise<void> {
     await this.startWebSocketServer();
+    
+    // Start browser discovery immediately (like old prototype)
+    const browserDiscovery = this.browserConnector.startDiscovery(this.pluginManager);
+    
+    // Load plugins in parallel
+    const pluginDiscovery = this.loadPlugins();
+    
+    // Wait for both to complete
+    await Promise.all([browserDiscovery, pluginDiscovery]);
+  }
+  
+  private async loadPlugins(): Promise<void> {
     const plugins = await this.pluginManager.discoverPlugins();
     
     // Load and register plugin backends
@@ -33,8 +45,6 @@ export class CondenserService {
         backend.setMessageRouter(this.messageRouter);
       }
     }
-    
-    await this.browserConnector.startDiscovery(this.pluginManager);
   }
 
   private async startWebSocketServer(): Promise<void> {

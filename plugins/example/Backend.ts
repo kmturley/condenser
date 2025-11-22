@@ -8,6 +8,7 @@ export class Backend extends CondenserBackend {
     this.registerMessage('increment', this.handleIncrement.bind(this));
     this.registerMessage('reset', this.handleReset.bind(this));
     this.registerMessage('click', this.handleClick.bind(this));
+    this.registerMessage('init', this.handleInit.bind(this));
   }
   
   private count = 0;
@@ -47,6 +48,11 @@ export class Backend extends CondenserBackend {
   
   handleClick() {
     this.count++;
+    this.sendMessage('count', { count: this.count });
+    return { count: this.count };
+  }
+  
+  handleInit() {
     this.sendMessage('count', { count: this.count });
     return { count: this.count };
   }

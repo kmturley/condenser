@@ -45,6 +45,6 @@ export default defineConfig({
     host: '0.0.0.0',
     https: getHTTPS(),
     cors: true,
-    hmr: false
+    hmr: true
   }
 });

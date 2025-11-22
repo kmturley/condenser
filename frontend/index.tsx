@@ -9,7 +9,7 @@ const App: React.FC = () => {
   const [ws, setWs] = useState<WebSocket | null>(null);
 
   useEffect(() => {
-    console.log('Condenser loaded!');
+    console.log('Condenser loaded 2!');
     document.body.style.border = '1px solid red';
 
     // Connect to development server WebSocket
@@ -24,6 +24,12 @@ const App: React.FC = () => {
     
     websocket.onopen = () => {
       console.log('WebSocket connected');
+      // Send init message to get current count
+      websocket.send(JSON.stringify({ 
+        namespace: 'example', 
+        type: 'init', 
+        payload: {} 
+      }));
     };
     
     websocket.onerror = (error) => {
