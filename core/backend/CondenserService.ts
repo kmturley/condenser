@@ -17,7 +17,7 @@ export class CondenserService {
   constructor(config: ServiceConfig) {
     this.config = config;
     this.pluginManager = new PluginManager(config.pluginsPath);
-    this.browserConnector = new BrowserConnector(config.debugUrls);
+    this.browserConnector = new BrowserConnector(config.debugUrls, config.serverPort, config.vitePort);
     this.messageRouter = new MessageRouter();
   }
 

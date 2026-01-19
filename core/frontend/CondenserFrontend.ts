@@ -68,6 +68,8 @@ export abstract class CondenserFrontend implements ICondenserFrontend {
     const protocol = isSecure ? 'wss:' : 'ws:';
     // Use development server IP passed from Vite config
     const devServerHost = typeof (window as any).__DEV_SERVER_IP__ !== 'undefined' ? (window as any).__DEV_SERVER_IP__ : 'localhost';
-    return `${protocol}//${devServerHost}:3001`;
+    // Use server port injected by backend
+    const serverPort = typeof (window as any).condenserServerPort !== 'undefined' ? (window as any).condenserServerPort : 3001;
+    return `${protocol}//${devServerHost}:${serverPort}`;
   }
 }

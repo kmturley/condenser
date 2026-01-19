@@ -4,8 +4,8 @@ import { ServiceConfig } from '../core/shared/types';
 const config: ServiceConfig = {
   debugUrls: [
     'http://localhost:8080',    // Steam app
-    'http://localhost:9222',    // Chrome
-    'http://steamdeck:8081'     // Steam Deck
+    'http://steamdeck:8081',    // Steam Deck
+    'http://localhost:8082'     // Chrome debugger
   ],
   serverPort: 3001,
   vitePort: 3000,
