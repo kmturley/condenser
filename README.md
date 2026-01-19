@@ -5,7 +5,7 @@
 A development tool that injects React components into Steam web pages using Puppeteer and WebSocket communication.
 
 ![Condenser](/condenser-screenshot.jpg)
-Condenser injected into Browser, App and Steam Deck UI.
+Condenser injected into Browser, App and Steam Deck.
 
 ## Features
 
@@ -14,6 +14,28 @@ Condenser injected into Browser, App and Steam Deck UI.
 - **WebSocket Communication**: Real-time communication between injected frontend and backend
 - **CSP Bypass**: Automatically modifies Content Security Policy headers for injection
 - **Dual Mode**: Launch new browser or connect to existing Steam browser
+
+## Comparison vs existing solutions
+
+[Decky loader](https://decky.xyz/) for Steam Deck and [Millenium](https://steambrew.app/) for Desktop PCs already good a great job, however they have limitations and require separate plugins. Condenser is an attempt to unify the functionality into a single full-stack project.
+
+| Feature | **Condenser** | Decky | Millennium |
+|---------|---------------|-------|------------|
+| **Platform** | Any Steam + Steam Deck | Steam Deck only | Windows/Linux Steam |
+| **Language** | TypeScript/Node.js | Python + TypeScript | C++ + TypeScript |
+| **Hot Reload** | ✅ React Fast Refresh | ❌ Manual restart | ❌ Build required |
+| **Cross-Platform Dev** | ✅ Windows/macOS/Linux | ❌ SteamOS only | ❌ Windows/Linux only |
+| **Setup** | `npm install` | Linux VM required | C++ build tools |
+| **Dependencies** | Node.js only | Python ecosystem | C++ runtime |
+| **Plugin Creation** | 3 files, <50 lines | Template-based | Template + build |
+| **Performance** | Fast | Medium | Fastest |
+| **Development Speed** | Instant (HMR) | Slow (restart) | Slow (build) |
+
+**Condenser's Unique Advantages:**
+- Only system with instant hot reload for rapid development
+- True cross-platform development (works on any OS)
+- Minimal dependencies and setup complexity
+- Dynamic configuration with no hardcoded values
 
 ## Installation
 
