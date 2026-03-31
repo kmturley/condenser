@@ -5,13 +5,17 @@
   "description": "Turns Steam into liquid",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "tsc",
+    "build:frontend": "esbuild frontend/index.tsx --bundle --outfile=dist/frontend.iife.js --format=iife --global-name=CondenserApp",
+    "build:prod": "npm run build && npm run package",
+    "package": "pkg dist/index.js -t node18-linux-x64 -o dist/condenser-linux && pkg dist/index.js -t node18-macos-x64 -o dist/condenser-macos && pkg dist/index.js -t node18-win-x64 -o dist/condenser-windows.exe",
     "app:browser": "tsx watch backend/browser.ts",
     "app:steam": "/Applications/Steam.app/Contents/MacOS/steam_osx -dev",
     "app:steam-gamepad": "/Applications/Steam.app/Contents/MacOS/steam_osx -dev -gamepadui",
     "apps": "concurrently \"npm run app:browser\" \"npm run app:steam\"",
     "dev": "npm run services",
-    "service:frontend": "vite frontend",
+    "service:frontend": "vite --config vite.config.js",
     "service:server": "tsx watch backend/index.ts",
     "service:target": "tsx watch backend/target.ts",
     "services": "concurrently \"npm run service:frontend\" \"npm run service:server\" \"npm run service:target\"",
@@ -28,6 +32,8 @@
     "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^4.0.0",
     "concurrently": "^8.0.0",
+    "esbuild": "^0.27.4",
+    "pkg": "^5.8.1",
     "puppeteer": "^24.26.1",
     "tsx": "^4.0.0",
     "typescript": "^5.0.0",
@@ -40,9 +46,16 @@
   ],
   "author": "kmturley",
   "license": "MIT",
+  "pkg": {
+    "assets": [
+      "dist/frontend.iife.js",
+      "condenser.service",
+      "com.condenser.service.plist",
+      "install.js"
+    ]
+  },
   "dependencies": {
-    "react": "^18.0.0",
-    "react-dom": "^18.0.0",
-    "ws": "^8.18.3"
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
   }
 }

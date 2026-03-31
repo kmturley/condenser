@@ -34,9 +34,9 @@ export default defineConfig(({ mode }) => ({
     include: "**/*.{jsx,tsx}",
     jsxRuntime: 'classic'
   })],
-  root: '.',
+  root: 'frontend',
   build: mode === 'production' ? {
-    outDir: 'dist',
+    outDir: '../dist',
     rollupOptions: {
       output: {
         entryFileNames: 'frontend.js',
@@ -45,7 +45,7 @@ export default defineConfig(({ mode }) => ({
       }
     }
   } : {
-    outDir: 'dist'
+    outDir: '../dist'
   },
   define: {
     __DEV_SERVER_IP__: JSON.stringify(getDevServerIP())

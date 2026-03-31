@@ -3,6 +3,11 @@ import { SERVER_PORT } from './server';
 import { networkInterfaces } from 'os';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 interface ChromeVersionInfo {
   Browser: string;
@@ -14,6 +19,9 @@ interface ChromeVersionInfo {
 }
 
 const TARGET_URL: string = 'https://store.steampowered.com/';
+
+const isProduction = process.env.NODE_ENV === 'production' || existsSync(join(__dirname, 'frontend.iife.js'));
+const frontendCode = isProduction ? readFileSync(join(__dirname, 'frontend.iife.js'), 'utf8') : '';
 
 function getLocalIP(): string {
   const nets = networkInterfaces();
@@ -112,30 +120,53 @@ async function findAllPages(pages: Page[], matches: string[]): Promise<Page[]> {
 }
 
 function injectScript(domain: string) {
-  return `
-    (() => {
-      try {
-        if (window.condenserHasLoaded) return;
-        window.condenserHasLoaded = true;
-        (async () => {
-          try {
-            await import('${domain}/@react-refresh').then(module => {
-              module.injectIntoGlobalHook(window);
-              window.$RefreshReg$ = () => {};
-              window.$RefreshSig$ = () => (type) => type;
-            });
-            await import('${domain}/@vite/client');
-            await import('${domain}/index.tsx');
-          } catch (e) {
-            console.error('Condenser injection error:', e);
-            window.location.reload();
+  if (isProduction) {
+    return `
+      (() => {
+        try {
+          if (window.condenserHasLoaded) return;
+          window.condenserHasLoaded = true;
+          
+          // Inject bundled frontend directly
+          const script = document.createElement('script');
+          script.textContent = ${JSON.stringify(frontendCode)};
+          document.head.appendChild(script);
+          
+          // Initialize if available
+          if (window.CondenserApp && window.CondenserApp.init) {
+            window.CondenserApp.init();
           }
-        })();
-      } catch (e) {
-        console.error('Condenser setup error:', e);
-      }
-    })()
-  `;
+        } catch (e) {
+          console.error('Condenser injection error:', e);
+        }
+      })()
+    `;
+  } else {
+    return `
+      (() => {
+        try {
+          if (window.condenserHasLoaded) return;
+          window.condenserHasLoaded = true;
+          (async () => {
+            try {
+              await import('${domain}/@react-refresh').then(module => {
+                module.injectIntoGlobalHook(window);
+                window.$RefreshReg$ = () => {};
+                window.$RefreshSig$ = () => (type) => type;
+              });
+              await import('${domain}/@vite/client');
+              await import('${domain}/index.tsx');
+            } catch (e) {
+              console.error('Condenser injection error:', e);
+              window.location.reload();
+            }
+          })();
+        } catch (e) {
+          console.error('Condenser setup error:', e);
+        }
+      })()
+    `;
+  }
 }
 
 async function pageSetup(page: Page, domain: string) {

@@ -1,0 +1,13 @@
+[Unit]
+Description=Condenser Steam UI Injector
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/node /opt/condenser/condenser
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target
