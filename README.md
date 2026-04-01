@@ -109,6 +109,8 @@ npm run certs
 
 This enables HTTPS/WSS connections without certificate errors on both local development and Steam Deck.
 
+**Important:** After running `npm run certs`, you may need to **restart Steam** on the Steam Deck for the certificate changes to take effect.
+
 ### 4. Start Development
 ```bash
 npm run services
