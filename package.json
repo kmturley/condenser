@@ -7,8 +7,8 @@
   "scripts": {
     "build": "tsc",
     "app:browser": "tsx watch backend/browser.ts",
-    "app:steam": "/Applications/Steam.app/Contents/MacOS/steam_osx -dev",
-    "app:steam-gamepad": "/Applications/Steam.app/Contents/MacOS/steam_osx -dev -gamepadui",
+    "app:steam": "/Applications/Steam.app/Contents/MacOS/steam_osx -dev -windowed -cef-enable-debugging",
+    "app:steam-gamepad": "/Applications/Steam.app/Contents/MacOS/steam_osx -dev -windowed -cef-enable-debugging -gamepadui",
     "apps": "concurrently \"npm run app:browser\" \"npm run app:steam\"",
     "dev": "npm run services",
     "service:frontend": "vite frontend",
