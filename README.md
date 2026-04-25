@@ -49,21 +49,19 @@ Trusted HTTPS/WSS development certificates require `mkcert`.
 
 Generate trusted certificates for https/wss local server:
 
-    npm run setup               # Install local mkcert trust and generate desktop certificates on this machine
-    npm run setup:remote        # Install local mkcert trust, generate remote certificates, and install trust on the Steam Deck
-    npm run setup:local         # Generate deck-local certificates on the Steam Deck and install trust there
+    npm run setup           # Generate and install local cert
+    npm run setup:remote    # Generate and install remote cert
 
 ### App Commands
 
-    npm run app                 # Launch the Steam desktop app in game mode
-    npm run app:desktop         # Launch the Steam desktop app in desktop mode
-    npm run app:browser         # Launch browser in development mode
+    npm run app             # Launch Steam in game mode
+    npm run app:desktop     # Launch Steam in desktop mode
+    npm run app:browser     # Launch browser in deve mode
 
 ### Service Commands
 
-    npm run dev                 # Start the frontend and backend dev services for desktop development
-    npm run dev:remote          # Start the frontend and backend dev services on the PC for Steam Deck remote development
-    npm run dev:local           # Start the frontend and backend dev services on the Steam Deck for deck-local development
+    npm run dev             # Start dev services for local dev
+    npm run dev:remote      # Start dev services for remote dev
 
 ### How It Works
 
@@ -101,7 +99,7 @@ To use Condenser with Steam Deck, you need to enable developer tools and SSH acc
 
 ### 3. Generate and Install Certificates
 
-**For desktop development on your PC:**
+**For same-device development on your current machine:**
 ```bash
 npm run setup
 ```
@@ -111,29 +109,18 @@ npm run setup
 npm run setup:remote
 ```
 
-**For services running on the Steam Deck: run this on the Steam Deck itself:**
-```bash
-npm run setup:local
-```
-
 ### 4. Start Development
-**Desktop development on your PC:**
+**Same-device development:**
 ```bash
 npm run app
 npm run dev
 ```
 
-**Steam Deck using services on your PC:**
+**Remote-device development, such as Steam Deck using services on your PC:**
 ```bash
 npm run dev:remote
 ```
-Launch Steam on the Deck with developer tools enabled.
-
-**Steam Deck with services running locally on the Deck:**
-```bash
-npm run dev:local
-```
-Launch Steam on the Deck with developer tools enabled.
+Launch Steam on the remote device with developer tools enabled.
 
 ## Directory structure
 

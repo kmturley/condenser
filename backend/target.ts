@@ -1,6 +1,6 @@
 import puppeteer, { Browser, Page, Target, HTTPRequest } from 'puppeteer';
 import { createLogger } from '../shared/logger';
-import { getRuntimeConfig, getTopologyFromArg, Topology } from '../shared/runtime';
+import { getRuntimeConfig, getModeFromArg, Mode } from '../shared/runtime';
 
 interface ChromeVersionInfo {
   Browser: string;
@@ -17,8 +17,8 @@ const TARGET_PAGES: string[] = [
   'Welcome to Steam',
 ];
 
-export async function startDiscovery(topology: Topology) {
-  const config = getRuntimeConfig(topology);
+export async function startDiscovery(mode: Mode) {
+  const config = getRuntimeConfig(mode);
   const logger = createLogger('target', config.enableDebugLogs);
   const browsers = await discoverAllBrowsers(config.debugTargets, config.frontendOrigin, logger);
   if (browsers.length === 0) {
@@ -202,4 +202,4 @@ function rewriteConnectSrc(policy: string, connectSrc: string[]): string {
   return `${policy}; ${value}`;
 }
 
-startDiscovery(getTopologyFromArg(process.argv.slice(2)));
+startDiscovery(getModeFromArg(process.argv.slice(2)));

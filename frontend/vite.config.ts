@@ -1,9 +1,9 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { getRuntimeConfig, getTlsOptions, getTopologyFromArg } from '../shared/runtime';
+import { getRuntimeConfig, getTlsOptions, getModeFromArg } from '../shared/runtime';
 
-const topology = getTopologyFromArg(process.argv.slice(2));
-const config = getRuntimeConfig(topology);
+const mode = getModeFromArg(process.argv.slice(2));
+const config = getRuntimeConfig(mode);
 
 export default defineConfig({
   plugins: [react({
@@ -18,7 +18,7 @@ export default defineConfig({
   server: {
     port: config.frontendPort,
     host: config.bindHost,
-    https: getTlsOptions(topology),
+    https: getTlsOptions(mode),
     cors: {
       origin: config.allowedOrigins,
     },

@@ -2,10 +2,10 @@ import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { hostname, networkInterfaces } from 'os';
 
-export type Topology = 'desktop' | 'deck-remote' | 'deck-local';
+export type Mode = 'local' | 'remote';
 
 export interface RuntimeConfig {
-  topology: Topology;
+  mode: Mode;
   nodeEnv: string;
   isProduction: boolean;
   enableDebugLogs: boolean;
@@ -33,21 +33,21 @@ const STEAM_LOOPBACK_ORIGIN = 'https://steamloopback.host';
 const STEAM_LOOPBACK_HTTP_ORIGIN = 'http://steamloopback.host';
 const STEAM_HOSTNAME_ORIGIN = 'https://steamloopback.host:443';
 
-export function getTopologyFromArg(args: string[]): Topology {
-  const topologyFlag = args.findIndex((value) => value === '--topology');
-  const topology = topologyFlag >= 0 ? args[topologyFlag + 1] : args[0];
-  if (topology === 'desktop' || topology === 'deck-remote' || topology === 'deck-local') {
-    return topology;
+export function getModeFromArg(args: string[]): Mode {
+  const modeFlag = args.findIndex((value) => value === '--mode');
+  const mode = modeFlag >= 0 ? args[modeFlag + 1] : args[0];
+  if (mode === 'local' || mode === 'remote') {
+    return mode;
   }
-  return 'desktop';
+  return 'local';
 }
 
-export function getRuntimeConfig(topology: Topology): RuntimeConfig {
+export function getRuntimeConfig(mode: Mode): RuntimeConfig {
   const nodeEnv = process.env.NODE_ENV ?? 'development';
   const isProduction = nodeEnv === 'production';
-  const publicHost = getPublicHost(topology);
-  const certPath = join(process.cwd(), 'certs', `${topology}.cert.pem`);
-  const keyPath = join(process.cwd(), 'certs', `${topology}.key.pem`);
+  const publicHost = getPublicHost(mode);
+  const certPath = join(process.cwd(), 'certs', `${mode}.cert.pem`);
+  const keyPath = join(process.cwd(), 'certs', `${mode}.key.pem`);
   const tlsEnabled = existsSync(certPath) && existsSync(keyPath);
   const httpProtocol = tlsEnabled ? 'https' : 'http';
   const wsProtocol = tlsEnabled ? 'wss' : 'ws';
@@ -62,11 +62,11 @@ export function getRuntimeConfig(topology: Topology): RuntimeConfig {
     STEAM_LOOPBACK_HTTP_ORIGIN,
     STEAM_HOSTNAME_ORIGIN,
     `${httpProtocol}://localhost:${FRONTEND_PORT}`,
-    topology === 'deck-remote' ? `${httpProtocol}://${publicHost}:${FRONTEND_PORT}` : null,
+    mode === 'remote' ? `${httpProtocol}://${publicHost}:${FRONTEND_PORT}` : null,
   ]);
 
   return {
-    topology,
+    mode,
     nodeEnv,
     isProduction,
     enableDebugLogs: !isProduction,
@@ -78,7 +78,7 @@ export function getRuntimeConfig(topology: Topology): RuntimeConfig {
     backendHttpOrigin,
     backendWsOrigin,
     allowedOrigins,
-    allowedHosts: getAllowedHosts(topology, publicHost),
+    allowedHosts: getAllowedHosts(mode, publicHost),
     connectSrc: unique([
       "'self'",
       frontendOrigin,
@@ -87,18 +87,18 @@ export function getRuntimeConfig(topology: Topology): RuntimeConfig {
       wsProtocol === 'wss'
         ? `ws://${publicHost}:${BACKEND_PORT}`
         : `wss://${publicHost}:${BACKEND_PORT}`,
-      topology !== 'deck-remote' ? `ws://localhost:${BACKEND_PORT}` : null,
-      topology !== 'deck-remote' ? `wss://localhost:${BACKEND_PORT}` : null,
+      mode !== 'remote' ? `ws://localhost:${BACKEND_PORT}` : null,
+      mode !== 'remote' ? `wss://localhost:${BACKEND_PORT}` : null,
     ]),
-    debugTargets: getDebugTargets(topology),
+    debugTargets: getDebugTargets(mode),
     certPath,
     keyPath,
-    certNames: getCertNames(topology, publicHost),
+    certNames: getCertNames(mode, publicHost),
   };
 }
 
-export function getTlsOptions(topology: Topology) {
-  const config = getRuntimeConfig(topology);
+export function getTlsOptions(mode: Mode) {
+  const config = getRuntimeConfig(mode);
   if (!existsSync(config.certPath) || !existsSync(config.keyPath)) {
     return false;
   }
@@ -109,8 +109,8 @@ export function getTlsOptions(topology: Topology) {
   };
 }
 
-export function getPublicHost(topology: Topology): string {
-  if (topology === 'deck-remote') {
+export function getPublicHost(mode: Mode): string {
+  if (mode === 'remote') {
     return getPrimaryIpv4() ?? hostname();
   }
 
@@ -130,30 +130,22 @@ export function getPrimaryIpv4(): string | null {
   return null;
 }
 
-function getAllowedHosts(topology: Topology, publicHost: string): string[] {
+function getAllowedHosts(mode: Mode, publicHost: string): string[] {
   return unique([
     'localhost',
     '127.0.0.1',
     '::1',
     'steamloopback.host',
     publicHost,
-    topology === 'deck-local' ? 'steamdeck' : null,
+    mode === 'remote' ? 'steamdeck' : null,
   ]);
 }
 
-function getDebugTargets(topology: Topology): string[] {
-  if (topology === 'deck-remote') {
+function getDebugTargets(mode: Mode): string[] {
+  if (mode === 'remote') {
     return [
       'http://steamdeck:8081',
       'http://steamdeck:8080',
-    ];
-  }
-
-  if (topology === 'deck-local') {
-    return [
-      'http://localhost:8081',
-      'http://localhost:8080',
-      'http://localhost:9222',
     ];
   }
 
@@ -163,14 +155,13 @@ function getDebugTargets(topology: Topology): string[] {
   ];
 }
 
-function getCertNames(topology: Topology, publicHost: string): string[] {
+function getCertNames(mode: Mode, publicHost: string): string[] {
   return unique([
     'localhost',
     '127.0.0.1',
     '::1',
-    topology === 'deck-remote' ? publicHost : null,
-    topology === 'deck-local' ? 'steamdeck' : null,
-    topology === 'deck-local' ? getPrimaryIpv4() : null,
+    mode === 'remote' ? publicHost : null,
+    mode === 'remote' ? 'steamdeck' : null,
   ]);
 }
 
