@@ -1,43 +1,31 @@
 import WebSocket, { WebSocketServer } from 'ws';
 import { createServer } from 'https';
-import { existsSync, readFileSync } from 'fs';
-import { join } from 'path';
+import { IncomingMessage } from 'http';
+import { createLogger } from '../shared/logger';
+import { getRuntimeConfig, getTlsOptions, Topology } from '../shared/runtime';
 
 export const SERVER_PORT: number = 3001;
-const hasSSL = existsSync(join(process.cwd(), 'certs', 'cert.pem'));
-export const SERVER_URL: string = `${hasSSL ? 'wss' : 'ws'}://localhost:${SERVER_PORT}`;
 
-function createSSLOptions() {
-  try {
-    return {
-      key: readFileSync(join(process.cwd(), 'certs', 'key.pem')),
-      cert: readFileSync(join(process.cwd(), 'certs', 'cert.pem'))
-    };
-  } catch {
-    // Generate self-signed cert if none exists
-    console.log('No SSL certificates found, using HTTP/WS');
-    return null;
-  }
-}
-
-export function startServer() {
-  const sslOptions = hasSSL ? createSSLOptions() : null;
-  
+export function startServer(topology: Topology) {
+  const config = getRuntimeConfig(topology);
+  const logger = createLogger('server', config.enableDebugLogs);
+  const sslOptions = getTlsOptions(topology);
   let wss: WebSocketServer;
-  
+
   if (sslOptions) {
     const server = createServer(sslOptions, (req, res) => {
       res.writeHead(200, { 'Content-Type': 'text/plain' });
       res.end('WebSocket Server Running');
     });
     wss = new WebSocketServer({ server });
-    server.listen(SERVER_PORT, '0.0.0.0', () => {
-      console.log('Server.started (WSS)', SERVER_URL);
+    server.listen(config.backendPort, config.bindHost, () => {
+      logger.info('Server.started (WSS)', config.backendWsOrigin);
     });
   } else {
-    wss = new WebSocketServer({ port: SERVER_PORT, host: '0.0.0.0' });
-    console.log('Server.started (WS)', SERVER_URL);
+    wss = new WebSocketServer({ port: config.backendPort, host: config.bindHost });
+    logger.warn('No TLS certificates found, using WS', config.backendWsOrigin);
   }
+
   let requestCount = 0;
   const clients = new Set<WebSocket>();
 
@@ -50,20 +38,35 @@ export function startServer() {
     });
   };
 
-  wss.on('connection', (ws: WebSocket) => {
-    console.log('Server.connection');
+  wss.on('connection', (ws: WebSocket, request: IncomingMessage) => {
+    if (!isAllowedRequest(request, config.allowedOrigins)) {
+      logger.warn('Rejected websocket connection', request.headers.origin ?? 'no-origin');
+      ws.close(1008, 'Origin not allowed');
+      return;
+    }
+
+    logger.debug('Server.connection', request.headers.origin ?? 'no-origin');
     clients.add(ws);
     ws.send(JSON.stringify({ count: requestCount }));
-    
+
     ws.on('message', (data: any) => {
-      console.log('Server.message', data.toString());
+      logger.debug('Server.message', data.toString());
       requestCount++;
       broadcast({ count: requestCount });
     });
-    
+
     ws.on('close', () => {
-      console.log('Server.close');
+      logger.debug('Server.close');
       clients.delete(ws);
     });
   });
+}
+
+function isAllowedRequest(request: IncomingMessage, allowedOrigins: string[]): boolean {
+  const origin = request.headers.origin;
+  if (!origin) {
+    return true;
+  }
+
+  return allowedOrigins.includes(origin);
 }

@@ -1,8 +1,6 @@
-import puppeteer, { Browser, Page, Target, HTTPRequest, Frame } from 'puppeteer';
-import { SERVER_PORT } from './server';
-import { networkInterfaces } from 'os';
-import { readFileSync, existsSync } from 'fs';
-import { join } from 'path';
+import puppeteer, { Browser, Page, Target, HTTPRequest } from 'puppeteer';
+import { createLogger } from '../shared/logger';
+import { getRuntimeConfig, getTopologyFromArg, Topology } from '../shared/runtime';
 
 interface ChromeVersionInfo {
   Browser: string;
@@ -14,70 +12,46 @@ interface ChromeVersionInfo {
 }
 
 const TARGET_URL: string = 'https://store.steampowered.com/';
-
-function getLocalIP(): string {
-  const nets = networkInterfaces();
-  for (const name of Object.keys(nets)) {
-    for (const net of nets[name]!) {
-      if (net.family === 'IPv4' && !net.internal) {
-        return net.address;
-      }
-    }
-  }
-  return 'localhost';
-}
-
-function getDomain(debugUrl: string): string {
-  const isLocalhost = debugUrl.includes('localhost') || debugUrl.includes('127.0.0.1');
-  const hasSSL = existsSync(join(process.cwd(), 'certs', 'cert.pem'));
-  const protocol = hasSSL ? 'https' : 'http';
-  
-  return isLocalhost 
-    ? `${protocol}://localhost:3000` 
-    : `${protocol}://${getLocalIP()}:3000`;
-}
-// URLs to scan for remote debugging
-// 8080 Steam app
-// 9222 Chrome
-const DEBUG_URLS: string[] = [
-  'http://localhost:8080',
-  'http://localhost:9222',
-  'http://steamdeck:8081'
-];
 const TARGET_PAGES: string[] = [
   'Steam Big Picture Mode',
   'Welcome to Steam',
 ];
 
-export async function startDiscovery() {
-  const browsers = await discoverAllBrowsers();
+export async function startDiscovery(topology: Topology) {
+  const config = getRuntimeConfig(topology);
+  const logger = createLogger('target', config.enableDebugLogs);
+  const browsers = await discoverAllBrowsers(config.debugTargets, config.frontendOrigin, logger);
   if (browsers.length === 0) {
-    console.log('No debugger found, launch a browser with remote debugging enabled or the Steam app');
+    logger.warn('No debugger found, launch a browser with remote debugging enabled or the Steam app');
     return;
   }
 
   for (const { browser, domain } of browsers) {
     browser.on('targetcreated', async (target: Target) => {
-      console.log('Target', target.url());
+      logger.debug('Target', target.url());
       if (target.type() === 'page') {
         const page = await target.page();
-        if (page) await pageSetup(page, domain);
+        if (page) await pageSetup(page, domain, config.connectSrc, logger);
       }
     });
-    
+
     const pages = await browser.pages();
-    const matchingPages = await findAllPages(pages, TARGET_PAGES);
+    const matchingPages = await findAllPages(pages, TARGET_PAGES, logger);
     for (const page of matchingPages) {
-      await pageSetup(page, domain);
+      await pageSetup(page, domain, config.connectSrc, logger);
     }
   }
 }
 
-async function discoverAllBrowsers(): Promise<Array<{ browser: Browser, domain: string }>> {
+async function discoverAllBrowsers(
+  debugUrls: string[],
+  domain: string,
+  logger: ReturnType<typeof createLogger>
+): Promise<Array<{ browser: Browser, domain: string }>> {
   const browsers: Array<{ browser: Browser, domain: string }> = [];
-  for (const debugUrl of DEBUG_URLS) {
+  for (const debugUrl of debugUrls) {
     try {
-      console.log(`Scanning ${debugUrl}...`);
+      logger.debug(`Scanning ${debugUrl}...`);
       const browserURL = `${debugUrl}/json/version`;
       const response = await fetch(browserURL);
       const { webSocketDebuggerUrl } = await response.json() as ChromeVersionInfo;
@@ -85,24 +59,27 @@ async function discoverAllBrowsers(): Promise<Array<{ browser: Browser, domain: 
         browserWSEndpoint: webSocketDebuggerUrl,
         defaultViewport: null,
       });
-      const domain = getDomain(debugUrl);
-      console.log(`Connected to browser at ${debugUrl}, using domain ${domain}`);
+      logger.info(`Connected to browser at ${debugUrl}, using domain ${domain}`);
       browsers.push({ browser, domain });
-    } catch (error) {
+    } catch {
       continue;
     }
   }
   return browsers;
 }
 
-async function findAllPages(pages: Page[], matches: string[]): Promise<Page[]> {
+async function findAllPages(
+  pages: Page[],
+  matches: string[],
+  logger: ReturnType<typeof createLogger>
+): Promise<Page[]> {
   const matchingPages: Page[] = [];
   for (const page of pages) {
     const title = await page.title();
-    console.log(`Page: ${title}`);
+    logger.debug(`Page: ${title}`);
     for (const match of matches) {
       if (title === match) {
-        console.log(`Page match: ${title}`);
+        logger.info(`Page match: ${title}`);
         matchingPages.push(page);
         break;
       }
@@ -138,13 +115,18 @@ function injectScript(domain: string) {
   `;
 }
 
-async function pageSetup(page: Page, domain: string) {
-  console.log('Setup', page.url());
+async function pageSetup(
+  page: Page,
+  domain: string,
+  connectSrc: string[],
+  logger: ReturnType<typeof createLogger>
+) {
+  logger.debug('Setup', page.url());
   page.setBypassCSP(true);
   await page.setRequestInterception(true);
   page.on('request', (request: HTTPRequest) => {
     if (request.url().startsWith(domain) || request.url() === TARGET_URL) {
-      interceptRequest(request);
+      interceptRequest(request, connectSrc, logger);
     } else {
       request.continue();
     }
@@ -153,32 +135,32 @@ async function pageSetup(page: Page, domain: string) {
   const client = await page.createCDPSession();
   await client.send('Page.enable');
   client.on('Page.domContentEventFired', async () => {
-    console.log('DOM content loaded, injecting scripts...');
+    logger.debug('DOM content loaded, injecting scripts...');
     await page.evaluate(injectScript(domain));
   });
 
   await page.evaluate(injectScript(domain));
 }
 
-async function interceptRequest(request: HTTPRequest) {
-  console.log('Intercept', request.url());
+async function interceptRequest(
+  request: HTTPRequest,
+  connectSrc: string[],
+  logger: ReturnType<typeof createLogger>
+) {
+  logger.debug('Intercept', request.url());
+  const originalRejectUnauthorized = process.env.NODE_TLS_REJECT_UNAUTHORIZED;
   try {
-    // Temporarily disable SSL verification for self-signed certificates
-    const originalRejectUnauthorized = process.env.NODE_TLS_REJECT_UNAUTHORIZED;
     if (request.url().startsWith('https:')) {
       process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
     }
-    
+
     const response = await fetch(request.url());
-    
-    // Restore original setting
-    if (originalRejectUnauthorized !== undefined) {
-      process.env.NODE_TLS_REJECT_UNAUTHORIZED = originalRejectUnauthorized;
-    } else {
-      delete process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+
+    if (response.headers.has('content-security-policy')) {
+      logger.debug('Rewriting CSP for injected frontend');
     }
-    
-    const headers = updateHeaders(response.headers);
+
+    const headers = updateHeaders(response.headers, connectSrc);
     await request.respond({
       status: response.status,
       headers,
@@ -186,19 +168,22 @@ async function interceptRequest(request: HTTPRequest) {
       body: await response.text(),
     });
   } catch (error) {
-    console.error('Intercept error', error);
+    logger.error('Intercept error', error);
     await request.abort();
+  } finally {
+    if (originalRejectUnauthorized !== undefined) {
+      process.env.NODE_TLS_REJECT_UNAUTHORIZED = originalRejectUnauthorized;
+    } else {
+      delete process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+    }
   }
 }
 
-function updateHeaders(headers: Headers): Record<string, string> {
+function updateHeaders(headers: Headers, connectSrc: string[]): Record<string, string> {
   const modifiedHeaders: Record<string, string> = {};
   headers.forEach((value, key) => {
     if (key.toLowerCase() === 'content-security-policy') {
-      modifiedHeaders[key] = value.replace(
-        `connect-src 'self'`,
-        `connect-src 'self' ws://localhost:3000 wss://localhost:3000 ws://localhost:3001 wss://localhost:3001`
-      );
+      modifiedHeaders[key] = rewriteConnectSrc(value, connectSrc);
     } else {
       modifiedHeaders[key] = value;
     }
@@ -207,4 +192,14 @@ function updateHeaders(headers: Headers): Record<string, string> {
   return modifiedHeaders;
 }
 
-startDiscovery();
+function rewriteConnectSrc(policy: string, connectSrc: string[]): string {
+  const value = `connect-src ${connectSrc.join(' ')}`;
+
+  if (policy.includes('connect-src ')) {
+    return policy.replace(/connect-src [^;]+/, value);
+  }
+
+  return `${policy}; ${value}`;
+}
+
+startDiscovery(getTopologyFromArg(process.argv.slice(2)));

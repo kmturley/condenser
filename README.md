@@ -41,38 +41,37 @@ Condenser injected into Browser, App and Steam Deck.
 
     npm install
 
+Trusted HTTPS/WSS development certificates require `mkcert`.
+
 ## Usage
 
 ### Certificate Commands
 
 Generate trusted certificates for https/wss local server:
 
-    npm run certs:local         # Generates localhost certificates and installs them locally
-    npm run certs:steamdeck     # Generates IP-based certificates and installs them on Steam Deck via SSH
-    npm run certs               # Generates and installs certificates for both environments
+    npm run setup               # Install local mkcert trust and generate desktop certificates on this machine
+    npm run setup:remote        # Install local mkcert trust, generate remote certificates, and install trust on the Steam Deck
+    npm run setup:local         # Generate deck-local certificates on the Steam Deck and install trust there
 
 ### App Commands
 
+    npm run app                 # Launch the Steam desktop app in game mode
+    npm run app:desktop         # Launch the Steam desktop app in desktop mode
     npm run app:browser         # Launch browser in development mode
-    npm run app:steam           # Launch Steam app in development mode  
-    npm run app:steam-gamepad   # Launch Steam app with gamepad UI
-    npm run apps                # Launch browser and Steam simultaneously
 
 ### Service Commands
 
-    npm run service:frontend    # Start Vite dev server (http://localhost:3000)
-    npm run service:server      # Start WebSocket server (ws://localhost:3001)
-    npm run service:target      # Start target discovery and injection
-    npm run services            # Start all services simultaneously
+    npm run dev                 # Start the frontend and backend dev services for desktop development
+    npm run dev:remote          # Start the frontend and backend dev services on the PC for Steam Deck remote development
+    npm run dev:local           # Start the frontend and backend dev services on the Steam Deck for deck-local development
 
 ### How It Works
 
 The target service automatically:
 
-- Scans multiple debug ports (8080, 9222, 9223, 9224) for running browsers
+- Scans the configured Steam and browser remote-debugging endpoints for running targets
 - Discovers Steam-related pages by title and URL matching
 - Injects React components with hot reload into discovered targets
-- Falls back to launching a new browser if none found
 
 ## Steam Deck Setup
 
@@ -102,19 +101,39 @@ To use Condenser with Steam Deck, you need to enable developer tools and SSH acc
 
 ### 3. Generate and Install Certificates
 
-**For both local and Steam Deck development (recommended):**
+**For desktop development on your PC:**
 ```bash
-npm run certs
+npm run setup
 ```
 
-This enables HTTPS/WSS connections without certificate errors on both local development and Steam Deck.
+**For Steam Deck connecting to services running on your PC:**
+```bash
+npm run setup:remote
+```
+
+**For services running on the Steam Deck: run this on the Steam Deck itself:**
+```bash
+npm run setup:local
+```
 
 ### 4. Start Development
+**Desktop development on your PC:**
 ```bash
-npm run services
+npm run app
+npm run dev
 ```
 
-Condenser will automatically discover and inject into Steam Deck's browser when it's running in developer mode.
+**Steam Deck using services on your PC:**
+```bash
+npm run dev:remote
+```
+Launch Steam on the Deck with developer tools enabled.
+
+**Steam Deck with services running locally on the Deck:**
+```bash
+npm run dev:local
+```
+Launch Steam on the Deck with developer tools enabled.
 
 ## Directory structure
 

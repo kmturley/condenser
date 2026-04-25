@@ -1,39 +1,46 @@
 /// <reference types="vite/client" />
 
-declare const __DEV_SERVER_IP__: string;
+declare const __BACKEND_WS_ORIGIN__: string;
 import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 
 const App: React.FC = () => {
   const [count, setCount] = useState(0);
   const [ws, setWs] = useState<WebSocket | null>(null);
+  const isDev = import.meta.env.DEV;
 
   useEffect(() => {
-    console.log('Condenser loaded!');
-    document.body.style.border = '1px solid red';
+    if (isDev) {
+      console.log('Condenser loaded');
+      document.body.style.border = '1px solid red';
+    }
 
-    // Connect to development server WebSocket
-    const isSecure = window.location.protocol === 'https:';
-    const protocol = isSecure ? 'wss:' : 'ws:';
-    // Use development server IP passed from Vite config
-    const devServerHost = typeof __DEV_SERVER_IP__ !== 'undefined' ? __DEV_SERVER_IP__ : 'localhost';
-    const websocketUrl = `${protocol}//${devServerHost}:3001`;
-    console.log('Connecting to WebSocket:', websocketUrl);
-    
+    const websocketUrl = __BACKEND_WS_ORIGIN__;
+    if (isDev) {
+      console.log('Connecting to WebSocket:', websocketUrl);
+    }
+
     const websocket = new WebSocket(websocketUrl);
-    
+
     websocket.onopen = () => {
-      console.log('WebSocket connected');
+      if (isDev) {
+        console.log('WebSocket connected');
+      }
     };
-    
+
     websocket.onerror = (error) => {
-      console.log('WebSocket error:', error);
-      console.log(`Try visiting https://${devServerHost}:3001 in your browser and accepting the certificate`);
+      console.error('WebSocket error:', error);
+      if (isDev) {
+        const certificateUrl = websocketUrl.replace(/^wss:/, 'https:').replace(/^ws:/, 'http:');
+        console.log(`If this is a certificate issue, open ${certificateUrl} in a browser once.`);
+      }
     };
-    
+
     websocket.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      console.log('Client.message', data.count);
+      if (isDev) {
+        console.log('Client.message', data.count);
+      }
       setCount(data.count);
     };
 
