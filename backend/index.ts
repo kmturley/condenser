@@ -1,3 +1,4 @@
-import { startServer } from "./server";
+import { getTopologyFromArg } from '../shared/runtime';
+import { startServer } from './server';
 
-startServer();
+startServer(getTopologyFromArg(process.argv.slice(2)));

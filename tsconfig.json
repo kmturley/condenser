@@ -5,7 +5,7 @@
     "moduleResolution": "node",
     "lib": ["ES2020"],
     "outDir": "./dist",
-    "rootDir": "./backend",
+    "rootDir": ".",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -15,7 +15,9 @@
     "sourceMap": true
   },
   "include": [
-    "backend/**/*"
+    "backend/**/*",
+    "shared/**/*",
+    "scripts/**/*"
   ],
   "exclude": [
     "node_modules",
