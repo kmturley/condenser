@@ -2,6 +2,7 @@
 
 declare const __BACKEND_WS_ORIGIN__: string;
 import React, { useState, useEffect } from 'react';
+import { createLogger } from '../shared/logger';
 import { createRoot } from 'react-dom/client';
 
 const App: React.FC = () => {
@@ -10,36 +11,37 @@ const App: React.FC = () => {
   const isDev = import.meta.env.DEV;
 
   useEffect(() => {
+    const logger = createLogger('frontend', isDev);
     if (isDev) {
-      console.log('Condenser loaded');
+      logger.info('Condenser loaded');
       document.body.style.border = '1px solid red';
     }
 
     const websocketUrl = __BACKEND_WS_ORIGIN__;
     if (isDev) {
-      console.log('Connecting to WebSocket:', websocketUrl);
+      logger.info('Connecting to WebSocket:', websocketUrl);
     }
 
     const websocket = new WebSocket(websocketUrl);
 
     websocket.onopen = () => {
       if (isDev) {
-        console.log('WebSocket connected');
+        logger.info('WebSocket connected');
       }
     };
 
     websocket.onerror = (error) => {
-      console.error('WebSocket error:', error);
+      logger.error('WebSocket error:', error);
       if (isDev) {
         const certificateUrl = websocketUrl.replace(/^wss:/, 'https:').replace(/^ws:/, 'http:');
-        console.log(`If this is a certificate issue, open ${certificateUrl} in a browser once.`);
+        logger.info(`If this is a certificate issue, open ${certificateUrl} in a browser once.`);
       }
     };
 
     websocket.onmessage = (event) => {
       const data = JSON.parse(event.data);
       if (isDev) {
-        console.log('Client.message', data.count);
+        logger.info('Client.message', data.count);
       }
       setCount(data.count);
     };
