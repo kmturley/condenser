@@ -18,6 +18,7 @@ export interface RuntimeConfig {
   backendWsOrigin: string;
   allowedOrigins: string[];
   allowedHosts: string[];
+  scriptSrc: string[];
   connectSrc: string[];
   debugTargets: string[];
   certPath: string;
@@ -80,6 +81,12 @@ export function getRuntimeConfig(mode: Mode): RuntimeConfig {
     backendWsOrigin,
     allowedOrigins,
     allowedHosts: getAllowedHosts(mode, publicHost),
+    scriptSrc: unique([
+      "'self'",
+      "'unsafe-eval'",
+      "'unsafe-inline'",
+      frontendOrigin,
+    ]),
     connectSrc: unique([
       "'self'",
       frontendOrigin,

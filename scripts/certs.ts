@@ -1,6 +1,6 @@
 import { mkdirSync } from 'fs';
 import { spawnSync } from 'child_process';
-import { getRuntimeConfig, getModeFromArg } from '../shared/runtime';
+import { getRuntimeConfig, getModeFromArg } from '../shared/runtime.js';
 
 const mode = getModeFromArg(process.argv.slice(2));
 const config = getRuntimeConfig(mode);

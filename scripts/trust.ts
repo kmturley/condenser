@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'fs';
 import { spawnSync } from 'child_process';
-import { getRuntimeConfig, getModeFromArg } from '../shared/runtime';
+import { getRuntimeConfig, getModeFromArg } from '../shared/runtime.js';
 
 type TrustTarget = 'local' | 'deck';
 

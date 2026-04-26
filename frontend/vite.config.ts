@@ -5,10 +5,29 @@ import { getRuntimeConfig, getTlsOptions, getModeFromArg } from '../shared/runti
 const mode = getModeFromArg(process.argv.slice(2));
 const config = getRuntimeConfig(mode);
 
+function preventFullReloadPlugin() {
+  return {
+    name: 'prevent-full-reload',
+    configureServer(server) {
+      const originalSend = server.ws.send;
+      server.ws.send = function (payload) {
+        if (payload.type === 'full-reload') {
+          console.log('Preventing full reload to avoid Steam CEF crash');
+          return;
+        }
+        originalSend.call(this, payload);
+      };
+    }
+  };
+}
+
 export default defineConfig({
-  plugins: [react({
-    include: '**/*.{jsx,tsx}',
-  })],
+  plugins: [
+    react({
+      include: '**/*.{jsx,tsx}',
+    }),
+    preventFullReloadPlugin()
+  ],
   build: {
     outDir: '../dist',
   },

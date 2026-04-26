@@ -1,8 +1,8 @@
 import WebSocket, { WebSocketServer } from 'ws';
 import { createServer } from 'https';
 import { IncomingMessage } from 'http';
-import { createLogger } from '../shared/logger';
-import { getRuntimeConfig, getTlsOptions, Mode } from '../shared/runtime';
+import { createLogger } from '../shared/logger.js';
+import { getRuntimeConfig, getTlsOptions, Mode } from '../shared/runtime.js';
 
 export const SERVER_PORT: number = 3001;
 

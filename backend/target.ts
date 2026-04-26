@@ -1,6 +1,6 @@
 import puppeteer, { Browser, Page, Target, HTTPRequest } from 'puppeteer';
-import { createLogger } from '../shared/logger';
-import { getRuntimeConfig, getModeFromArg, Mode } from '../shared/runtime';
+import { createLogger } from '../shared/logger.js';
+import { getRuntimeConfig, getModeFromArg, Mode } from '../shared/runtime.js';
 
 interface ChromeVersionInfo {
   Browser: string;
@@ -31,14 +31,14 @@ export async function startDiscovery(mode: Mode) {
       logger.debug('Target', target.url());
       if (target.type() === 'page') {
         const page = await target.page();
-        if (page) await pageSetup(page, domain, config.connectSrc, logger);
+        if (page) await pageSetup(page, domain, config.connectSrc, config.scriptSrc, logger);
       }
     });
 
     const pages = await browser.pages();
     const matchingPages = await findAllPages(pages, TARGET_PAGES, logger);
     for (const page of matchingPages) {
-      await pageSetup(page, domain, config.connectSrc, logger);
+      await pageSetup(page, domain, config.connectSrc, config.scriptSrc, logger);
     }
   }
 }
@@ -118,14 +118,19 @@ async function pageSetup(
   page: Page,
   domain: string,
   connectSrc: string[],
+  scriptSrc: string[],
   logger: ReturnType<typeof createLogger>
 ) {
+  // Avoid setting up the same page twice
+  if ((page as any)._condenserSetup) return;
+  (page as any)._condenserSetup = true;
+
   logger.debug('Setup', page.url());
   page.setBypassCSP(true);
   await page.setRequestInterception(true);
   page.on('request', (request: HTTPRequest) => {
     if (request.url().startsWith(domain) || request.url() === TARGET_URL) {
-      interceptRequest(request, connectSrc, logger);
+      interceptRequest(request, connectSrc, scriptSrc, logger);
     } else {
       request.continue();
     }
@@ -145,6 +150,7 @@ async function pageSetup(
 async function interceptRequest(
   request: HTTPRequest,
   connectSrc: string[],
+  scriptSrc: string[],
   logger: ReturnType<typeof createLogger>
 ) {
   logger.debug('Intercept', request.url());
@@ -160,7 +166,7 @@ async function interceptRequest(
       logger.debug('Rewriting CSP for injected frontend');
     }
 
-    const headers = updateHeaders(response.headers, connectSrc);
+    const headers = updateHeaders(response.headers, connectSrc, scriptSrc);
     await request.respond({
       status: response.status,
       headers,
@@ -179,11 +185,14 @@ async function interceptRequest(
   }
 }
 
-function updateHeaders(headers: Headers, connectSrc: string[]): Record<string, string> {
+function updateHeaders(headers: Headers, connectSrc: string[], scriptSrc: string[]): Record<string, string> {
   const modifiedHeaders: Record<string, string> = {};
   headers.forEach((value, key) => {
     if (key.toLowerCase() === 'content-security-policy') {
-      modifiedHeaders[key] = rewriteConnectSrc(value, connectSrc);
+      let policy = value;
+      policy = rewriteCSPDirective(policy, 'connect-src', connectSrc);
+      policy = rewriteCSPDirective(policy, 'script-src', scriptSrc);
+      modifiedHeaders[key] = policy;
     } else {
       modifiedHeaders[key] = value;
     }
@@ -192,13 +201,11 @@ function updateHeaders(headers: Headers, connectSrc: string[]): Record<string, s
   return modifiedHeaders;
 }
 
-function rewriteConnectSrc(policy: string, connectSrc: string[]): string {
-  const value = `connect-src ${connectSrc.join(' ')}`;
-
-  if (policy.includes('connect-src ')) {
-    return policy.replace(/connect-src [^;]+/, value);
+function rewriteCSPDirective(policy: string, directive: string, sources: string[]): string {
+  const value = `${directive} ${sources.join(' ')}`;
+  if (policy.includes(`${directive} `)) {
+    return policy.replace(new RegExp(`${directive} [^;]+`), value);
   }
-
   return `${policy}; ${value}`;
 }
 
