@@ -31,14 +31,14 @@ export async function startDiscovery(mode: Mode) {
       logger.debug('Target', target.url());
       if (target.type() === 'page') {
         const page = await target.page();
-        if (page) await pageSetup(page, domain, config.connectSrc, config.scriptSrc, logger);
+        if (page) await pageSetup(page, domain, config.connectSrc, logger);
       }
     });
 
     const pages = await browser.pages();
     const matchingPages = await findAllPages(pages, TARGET_PAGES, logger);
     for (const page of matchingPages) {
-      await pageSetup(page, domain, config.connectSrc, config.scriptSrc, logger);
+      await pageSetup(page, domain, config.connectSrc, logger);
     }
   }
 }
@@ -91,25 +91,22 @@ async function findAllPages(
 function injectScript(domain: string) {
   return `
     (() => {
-      try {
-        if (window.condenserHasLoaded) return;
-        window.condenserHasLoaded = true;
-        (async () => {
-          try {
-            await import('${domain}/@react-refresh').then(module => {
-              module.injectIntoGlobalHook(window);
-              window.$RefreshReg$ = () => {};
-              window.$RefreshSig$ = () => (type) => type;
-            });
-            await import('${domain}/@vite/client');
-            await import('${domain}/index.tsx');
-          } catch (e) {
-            console.error('Condenser injection error:', e);
-          }
-        })();
-      } catch (e) {
-        console.error('Condenser setup error:', e);
-      }
+      if (window.condenserHasLoaded) return;
+      window.condenserHasLoaded = true;
+      (async () => {
+        try {
+          await import('${domain}/@react-refresh').then(module => {
+            module.injectIntoGlobalHook(window);
+            window.$RefreshReg$ = () => {};
+            window.$RefreshSig$ = () => (type) => type;
+          });
+          await import('${domain}/@vite/client');
+          await import('${domain}/index.tsx');
+        } catch (e) {
+          console.error('Condenser injection error:', e);
+          window.location.reload();
+        }
+      })();
     })()
   `;
 }
@@ -118,7 +115,6 @@ async function pageSetup(
   page: Page,
   domain: string,
   connectSrc: string[],
-  scriptSrc: string[],
   logger: ReturnType<typeof createLogger>
 ) {
   // Avoid setting up the same page twice
@@ -130,7 +126,7 @@ async function pageSetup(
   await page.setRequestInterception(true);
   page.on('request', (request: HTTPRequest) => {
     if (request.url().startsWith(domain) || request.url() === TARGET_URL) {
-      interceptRequest(request, connectSrc, scriptSrc, logger);
+      interceptRequest(request, connectSrc, logger);
     } else {
       request.continue();
     }
@@ -150,7 +146,6 @@ async function pageSetup(
 async function interceptRequest(
   request: HTTPRequest,
   connectSrc: string[],
-  scriptSrc: string[],
   logger: ReturnType<typeof createLogger>
 ) {
   logger.debug('Intercept', request.url());
@@ -166,7 +161,7 @@ async function interceptRequest(
       logger.debug('Rewriting CSP for injected frontend');
     }
 
-    const headers = updateHeaders(response.headers, connectSrc, scriptSrc);
+    const headers = updateHeaders(response.headers, connectSrc);
     await request.respond({
       status: response.status,
       headers,
@@ -185,13 +180,12 @@ async function interceptRequest(
   }
 }
 
-function updateHeaders(headers: Headers, connectSrc: string[], scriptSrc: string[]): Record<string, string> {
+function updateHeaders(headers: Headers, connectSrc: string[]): Record<string, string> {
   const modifiedHeaders: Record<string, string> = {};
   headers.forEach((value, key) => {
     if (key.toLowerCase() === 'content-security-policy') {
       let policy = value;
       policy = rewriteCSPDirective(policy, 'connect-src', connectSrc);
-      policy = rewriteCSPDirective(policy, 'script-src', scriptSrc);
       modifiedHeaders[key] = policy;
     } else {
       modifiedHeaders[key] = value;
