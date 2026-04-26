@@ -54,6 +54,7 @@ export function getRuntimeConfig(mode: Mode): RuntimeConfig {
   const frontendOrigin = `${httpProtocol}://${publicHost}:${FRONTEND_PORT}`;
   const backendHttpOrigin = `${httpProtocol}://${publicHost}:${BACKEND_PORT}`;
   const backendWsOrigin = `${wsProtocol}://${publicHost}:${BACKEND_PORT}`;
+  const frontendWsOrigin = `${wsProtocol}://${publicHost}:${FRONTEND_PORT}`;
   const allowedOrigins = unique([
     frontendOrigin,
     STEAM_STORE_ORIGIN,
@@ -84,6 +85,7 @@ export function getRuntimeConfig(mode: Mode): RuntimeConfig {
       frontendOrigin,
       backendHttpOrigin,
       backendWsOrigin,
+      frontendWsOrigin,
       wsProtocol === 'wss'
         ? `ws://${publicHost}:${BACKEND_PORT}`
         : `wss://${publicHost}:${BACKEND_PORT}`,

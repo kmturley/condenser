@@ -23,6 +23,11 @@ export default defineConfig({
       origin: config.allowedOrigins,
     },
     allowedHosts: config.allowedHosts,
-    hmr: false,
+    hmr: {
+      protocol: getRuntimeConfig(mode).certPath ? 'wss' : 'ws',
+      host: config.publicHost,
+      port: config.frontendPort,
+      overlay: false,
+    },
   },
 });

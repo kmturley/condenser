@@ -105,7 +105,6 @@ function injectScript(domain: string) {
             await import('${domain}/index.tsx');
           } catch (e) {
             console.error('Condenser injection error:', e);
-            window.location.reload();
           }
         })();
       } catch (e) {
@@ -132,14 +131,15 @@ async function pageSetup(
     }
   });
 
-  const client = await page.createCDPSession();
-  await client.send('Page.enable');
-  client.on('Page.domContentEventFired', async () => {
-    logger.debug('DOM content loaded, injecting scripts...');
-    await page.evaluate(injectScript(domain));
-  });
+  // Register script for all future navigations
+  await page.evaluateOnNewDocument(injectScript(domain));
 
-  await page.evaluate(injectScript(domain));
+  // Check if page is already loaded and inject immediately if it is
+  const isLoaded = await page.evaluate('document.readyState !== "loading"');
+  if (isLoaded) {
+    logger.debug('Page already loaded, injecting script now');
+    await page.evaluate(injectScript(domain));
+  }
 }
 
 async function interceptRequest(
