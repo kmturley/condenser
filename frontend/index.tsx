@@ -1,6 +1,7 @@
 /// <reference types="vite/client" />
 
-declare const __BACKEND_WS_ORIGIN__: string;
+declare const CONDENSER_URL: string;
+declare const CONDENSER_DEBUG: boolean;
 import React, { useState, useEffect } from 'react';
 import { createLogger } from '../shared/logger';
 import { createRoot } from 'react-dom/client';
@@ -11,49 +12,56 @@ const App: React.FC = () => {
   const isDev = import.meta.env.DEV;
 
   useEffect(() => {
-    const logger = createLogger('frontend', isDev);
-    if (isDev) {
-      logger.info('Condenser loaded');
-      document.body.style.border = '1px solid red';
-    }
+    const logger = createLogger('frontend', CONDENSER_DEBUG);
+    let socket: WebSocket | null = null;
+    let reconnectTimeout: ReturnType<typeof setTimeout>;
 
-    const websocketUrl = __BACKEND_WS_ORIGIN__;
-    if (isDev) {
+    const connect = () => {
+      const websocketUrl = CONDENSER_URL;
       logger.info('Connecting to WebSocket:', websocketUrl);
-    }
 
-    const websocket = new WebSocket(websocketUrl);
+      socket = new WebSocket(websocketUrl);
 
-    websocket.onopen = () => {
-      if (isDev) {
+      socket.onopen = () => {
         logger.info('WebSocket connected');
-      }
-    };
+        setWs(socket);
+      };
 
-    websocket.onerror = (error) => {
-      logger.error('WebSocket error:', error);
-      if (isDev) {
+      socket.onerror = (error) => {
+        logger.error('WebSocket error:', error);
         const certificateUrl = websocketUrl.replace(/^wss:/, 'https:').replace(/^ws:/, 'http:');
         logger.info(`If this is a certificate issue, open ${certificateUrl} in a browser once.`);
-      }
-    };
+      };
 
-    websocket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (isDev) {
+      socket.onmessage = (event) => {
+        const data = JSON.parse(event.data);
         logger.info('Client.message', data.count);
-      }
-      setCount(data.count);
+        setCount(data.count);
+      };
+
+      socket.onclose = () => {
+        logger.info('WebSocket disconnected. Retrying in 3s...');
+        setWs(null);
+        reconnectTimeout = setTimeout(connect, 3000);
+      };
     };
 
-    setWs(websocket);
+    logger.info('Condenser loaded');
+    document.body.style.border = '1px solid red';
 
-    return () => websocket.close();
+    connect();
+
+    return () => {
+      socket?.close();
+      clearTimeout(reconnectTimeout);
+    };
   }, []);
 
   const handleClick = () => {
-    if (ws) {
-      ws.send(JSON.stringify({ action: 'click' }));
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ action: 'click2' }));
+    } else {
+      console.warn('Cannot send: WebSocket is not open.');
     }
   };
 

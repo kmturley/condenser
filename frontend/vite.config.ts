@@ -13,7 +13,8 @@ export default defineConfig({
     outDir: '../dist',
   },
   define: {
-    __BACKEND_WS_ORIGIN__: JSON.stringify(config.backendWsOrigin),
+    CONDENSER_URL: JSON.stringify(config.backendWsOrigin),
+    CONDENSER_DEBUG: config.enableDebugLogs,
   },
   server: {
     port: config.frontendPort,
