@@ -1,9 +1,9 @@
 import { mkdirSync } from 'fs';
 import { spawnSync } from 'child_process';
-import { getRuntimeConfig, getTopologyFromArg } from '../shared/runtime';
+import { getRuntimeConfig, getModeFromArg } from '../shared/runtime.js';
 
-const topology = getTopologyFromArg(process.argv.slice(2));
-const config = getRuntimeConfig(topology);
+const mode = getModeFromArg(process.argv.slice(2));
+const config = getRuntimeConfig(mode);
 
 if (!commandExists('mkcert')) {
   console.error('mkcert is required for development certificates. Install mkcert and run this command again.');
@@ -20,7 +20,7 @@ run('mkcert', [
   ...config.certNames,
 ]);
 
-console.log(`Generated ${topology} certificate for: ${config.certNames.join(', ')}`);
+console.log(`Generated ${mode} certificate for: ${config.certNames.join(', ')}`);
 
 function commandExists(command: string): boolean {
   const result = spawnSync('sh', ['-lc', `command -v ${command}`], {

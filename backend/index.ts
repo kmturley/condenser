@@ -1,4 +1,4 @@
-import { getTopologyFromArg } from '../shared/runtime';
-import { startServer } from './server';
+import { getModeFromArg } from '../shared/runtime.js';
+import { startServer } from './server.js';
 
-startServer(getTopologyFromArg(process.argv.slice(2)));
+startServer(getModeFromArg(process.argv.slice(2)));

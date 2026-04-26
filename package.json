@@ -11,12 +11,10 @@
     "app": "tsx scripts/app.ts game",
     "app:browser": "tsx watch backend/browser.ts",
     "app:desktop": "tsx scripts/app.ts desktop",
-    "dev": "NODE_ENV=development concurrently \"vite frontend --config frontend/vite.config.ts -- --topology desktop\" \"tsx watch backend/index.ts desktop\" \"tsx watch backend/target.ts desktop\"",
-    "dev:remote": "NODE_ENV=development concurrently \"vite frontend --config frontend/vite.config.ts -- --topology deck-remote\" \"tsx watch backend/index.ts deck-remote\" \"tsx watch backend/target.ts deck-remote\"",
-    "dev:local": "NODE_ENV=development concurrently \"vite frontend --config frontend/vite.config.ts -- --topology deck-local\" \"tsx watch backend/index.ts deck-local\" \"tsx watch backend/target.ts deck-local\"",
-    "setup": "tsx scripts/trust.ts local && tsx scripts/certs.ts desktop",
-    "setup:remote": "tsx scripts/trust.ts local && tsx scripts/certs.ts deck-remote && tsx scripts/trust.ts deck deck-remote",
-    "setup:local": "tsx scripts/certs.ts deck-local && tsx scripts/trust.ts deck deck-local",
+    "dev": "NODE_ENV=development concurrently \"vite frontend --config frontend/vite.config.ts -- --mode local\" \"tsx watch backend/index.ts local\" \"tsx watch backend/target.ts local\"",
+    "dev:remote": "NODE_ENV=development concurrently \"vite frontend --config frontend/vite.config.ts -- --mode remote\" \"tsx watch backend/index.ts remote\" \"tsx watch backend/target.ts remote\"",
+    "setup": "tsx scripts/trust.ts local && tsx scripts/certs.ts local",
+    "setup:remote": "tsx scripts/trust.ts local && tsx scripts/certs.ts remote && tsx scripts/trust.ts deck remote",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "devDependencies": {

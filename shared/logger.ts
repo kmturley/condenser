@@ -15,13 +15,19 @@ export function createLogger(scope: string, enabled = true): Logger {
       }
     },
     info: (...args: unknown[]) => {
-      console.log(prefix, ...args);
+      if (enabled) {
+        console.log(prefix, ...args);
+      }
     },
     warn: (...args: unknown[]) => {
-      console.warn(prefix, ...args);
+      if (enabled) {
+        console.warn(prefix, ...args);
+      }
     },
     error: (...args: unknown[]) => {
-      console.error(prefix, ...args);
+      if (enabled) {
+        console.error(prefix, ...args);
+      }
     },
   };
 }
