@@ -13,6 +13,7 @@
     "app:desktop": "tsx scripts/app.ts desktop",
     "dev": "NODE_ENV=development concurrently \"vite frontend --config frontend/vite.config.ts -- --mode local\" \"tsx watch backend/index.ts local\" \"tsx watch backend/target.ts local\"",
     "dev:remote": "NODE_ENV=development concurrently \"vite frontend --config frontend/vite.config.ts -- --mode remote\" \"tsx watch backend/index.ts remote\" \"tsx watch backend/target.ts remote\"",
+    "dev:tools": "tsx scripts/devtools.ts",
     "setup": "tsx scripts/trust.ts local && tsx scripts/certs.ts local",
     "setup:remote": "tsx scripts/trust.ts local && tsx scripts/certs.ts remote && tsx scripts/trust.ts deck remote",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -25,6 +26,7 @@
     "@vitejs/plugin-react": "^6.0.1",
     "concurrently": "^8.0.0",
     "puppeteer": "^24.42.0",
+    "react-devtools": "^7.0.1",
     "tsx": "^4.0.0",
     "typescript": "^5.0.0",
     "vite": "^8.0.10"

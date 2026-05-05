@@ -62,6 +62,7 @@ Generate trusted certificates for https/wss local server:
 
     npm run dev             # Start dev services for local dev
     npm run dev:remote      # Start dev services for remote dev
+    npm run dev:tools       # Launch React DevTools and inject into Steam
 
 ### How It Works
 
