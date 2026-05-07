@@ -16,9 +16,10 @@
     "dev:tools": "tsx scripts/devtools.ts",
     "setup": "tsx scripts/trust.ts local && tsx scripts/certs.ts local",
     "setup:remote": "tsx scripts/trust.ts local && tsx scripts/certs.ts remote && tsx scripts/trust.ts deck remote",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@types/node": "^20.0.0",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",

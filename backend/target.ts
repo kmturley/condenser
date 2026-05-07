@@ -29,7 +29,7 @@ const STEAM_SHARED_CONTEXT_TITLES = new Set([
   'SP',
 ]);
 
-function isSteamSharedContextTab(title: string, url: string): boolean {
+export function isSteamSharedContextTab(title: string, url: string): boolean {
   return (
     (url.includes('https://steamloopback.host/routes/') ||
       url.includes('https://steamloopback.host/index.html')) &&
@@ -37,7 +37,7 @@ function isSteamSharedContextTab(title: string, url: string): boolean {
   );
 }
 
-function transpile(filePath: string): string {
+export function transpile(filePath: string): string {
   const source = fs.readFileSync(filePath, 'utf8');
   const { outputText } = ts.transpileModule(source, {
     compilerOptions: {
@@ -66,7 +66,7 @@ async function reloadComponent(page: Page, filePath: string): Promise<void> {
  * Reads window.__condenserUrl for the WebSocket backend URL.
  * Returns { ready: false } when Steam hasn't finished initialising.
  */
-function inject() {
+export function inject() {
   // tsx/esbuild rewrites named inner functions with __name(); define a no-op shim
   // so the serialised function body runs cleanly inside the browser.
   (window as any).__name = (f: any) => f;
@@ -380,4 +380,7 @@ export async function startDiscovery(mode: Mode) {
   discoverAndSetup();
 }
 
-startDiscovery(getModeFromArg(process.argv.slice(2)));
+// Only auto-start when this file is the direct entry point, not when imported by tests.
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  startDiscovery(getModeFromArg(process.argv.slice(2)));
+}
