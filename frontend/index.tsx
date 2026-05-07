@@ -1,13 +1,20 @@
 /// <reference types="vite/client" />
 
-import { createRoot } from 'react-dom/client';
-import App from './App';
+// Standalone test entry point — used by Vite at https://localhost:3000.
+// Steam injection bypasses this file entirely and loads App.tsx directly
+// via ts.transpileModule in backend/target.ts.
 
-let container = document.getElementById('condenser-root');
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import Counter from './components/Counter';
+
+declare const CONDENSER_URL: string;
+
+let container = document.getElementById('condenser-test-root');
 if (!container) {
   container = document.createElement('div');
-  container.id = 'condenser-root';
+  container.id = 'condenser-test-root';
   document.body.appendChild(container);
   const root = createRoot(container);
-  root.render(<App />);
+  root.render(React.createElement(Counter, { React, websocketUrl: CONDENSER_URL }));
 }
