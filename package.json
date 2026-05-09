@@ -9,7 +9,7 @@
     "build:dev": "NODE_ENV=development tsc",
     "build:prod": "NODE_ENV=production tsc",
     "app": "tsx scripts/app.ts game",
-    "app:browser": "tsx watch backend/browser.ts",
+    "app:browser": "tsx watch scripts/browser.ts",
     "app:desktop": "tsx scripts/app.ts desktop",
     "dev": "NODE_ENV=development concurrently \"vite frontend --config frontend/vite.config.ts -- --mode local\" \"tsx watch backend/index.ts local\" \"tsx watch backend/target.ts local\"",
     "dev:remote": "NODE_ENV=development concurrently \"vite frontend --config frontend/vite.config.ts -- --mode remote\" \"tsx watch backend/index.ts remote\" \"tsx watch backend/target.ts remote\"",
