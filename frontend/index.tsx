@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 
 // Standalone test entry point — used by Vite at https://localhost:3000.
-// Steam injection bypasses this file entirely and loads App.tsx directly
+// Steam injection bypasses this file entirely and loads ./components directly
 // via ts.transpileModule in backend/target.ts.
 
 import React from 'react';
