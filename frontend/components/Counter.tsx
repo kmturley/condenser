@@ -37,8 +37,11 @@ export default function Counter({ React, websocketUrl }: { React: any; websocket
     connect();
 
     return () => {
-      socket?.close();
       clearTimeout(reconnectTimeout);
+      if (socket) {
+        socket.onclose = null;
+        socket.close();
+      }
     };
   }, []);
 
@@ -52,22 +55,10 @@ export default function Counter({ React, websocketUrl }: { React: any; websocket
 
   return React.createElement(
     'div',
-    { style: { padding: '16px', color: '#c6d4e5', fontFamily: 'sans-serif' } },
-    React.createElement('div', { style: { marginBottom: 12, fontSize: 16 } }, 'Counter'),
+    { style: { padding: '16px' } },
     React.createElement(
       'button',
-      {
-        onClick: handleClick,
-        style: {
-          background: '#4c6b8a',
-          border: 'none',
-          color: '#fff',
-          borderRadius: 4,
-          padding: '8px 16px',
-          cursor: 'pointer',
-          fontSize: 14,
-        },
-      },
+      { className: 'DialogButton _DialogLayout Secondary', onClick: handleClick },
       count > 0 ? 'Send Request (' + count + ')' : 'Send Request',
     ),
   );

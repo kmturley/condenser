@@ -17,7 +17,7 @@ Condenser injected into Browser, App and Steam Deck.
 
 ## Comparison vs existing solutions
 
-[Decky loader](https://decky.xyz/) for Steam Deck and [Millenium](https://steambrew.app/) for Desktop PCs already good a great job, however they have limitations and require separate plugins. Condenser is an attempt to unify the functionality into a single full-stack project.
+[Decky loader](https://decky.xyz/) for Steam Deck and [Millenium](https://steambrew.app/) for Desktop PCs already do a great job, however they have limitations and require separate plugins. Condenser is an attempt to unify the functionality into a single full-stack project.
 
 | Feature | **Condenser** | Decky | Millennium |
 |---------|---------------|-------|------------|
@@ -56,7 +56,7 @@ Generate trusted certificates for https/wss local server:
 
     npm run app             # Launch Steam in game mode
     npm run app:desktop     # Launch Steam in desktop mode
-    npm run app:browser     # Launch browser in deve mode
+    npm run app:browser     # Launch browser in dev mode
 
 ### Service Commands
 
