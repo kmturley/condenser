@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import Counter from './components/Counter';
+import condenserTab from './components/condenser-tab';
 
 declare const CONDENSER_URL: string;
 
@@ -16,5 +16,5 @@ if (!container) {
   container.id = 'condenser-test-root';
   document.body.appendChild(container);
   const root = createRoot(container);
-  root.render(React.createElement(Counter, { React, websocketUrl: CONDENSER_URL }));
+  root.render(React.createElement(condenserTab.panel, { React, websocketUrl: CONDENSER_URL }));
 }

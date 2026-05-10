@@ -13,11 +13,12 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { test, expect, chromium } from '@playwright/test';
 import type { Browser, Page } from '@playwright/test';
-import { inject, isSteamSharedContextTab, transpile } from '../backend/target.js';
+import { inject } from '../frontend/steam/inject.js';
+import { isSteamSharedContextTab, transpile } from '../backend/target.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const STEAM_DEBUG_URL = 'http://localhost:8080';
-const COUNTER_PATH = path.join(__dirname, '..', 'frontend', 'components', 'Counter.tsx');
+const CONDENSER_TAB_PATH = path.join(__dirname, '..', 'frontend', 'components', 'condenser-tab.tsx');
 const TEST_WS_URL = 'ws://localhost:3001';
 
 // ─── Shared browser / page ────────────────────────────────────────────────────
@@ -141,7 +142,7 @@ test.describe('Steam context', () => {
 test.describe('Injection', () => {
 
   test('inject() returns { ready: true, success: true }', async () => {
-    await sharedPage.evaluate(() => { delete (window as any).__injected; });
+    await sharedPage.evaluate(() => { delete (window as any).__condenser; });
     const result = await sharedPage.evaluate(inject) as any;
 
     expect(result.ready).toBe(true);
@@ -149,8 +150,8 @@ test.describe('Injection', () => {
     expect(result.isReinjection).toBe(false);
   });
 
-  test('sets window.__injected guard', async () => {
-    const injected = await sharedPage.evaluate(() => !!(window as any).__injected);
+  test('sets window.__condenser.core.injected guard', async () => {
+    const injected = await sharedPage.evaluate(() => !!(window as any).__condenser?.core?.injected);
     expect(injected).toBe(true);
   });
 
@@ -163,19 +164,20 @@ test.describe('Injection', () => {
   test('finds and caches the Quick Access Menu renderer', async () => {
     const result = await sharedPage.evaluate(inject) as any;
     expect(result.quickAccessMenuFound).toBe(true);
-    const cacheSet = await sharedPage.evaluate(() => !!(window as any).__quickAccessMenuRenderer);
+    const cacheSet = await sharedPage.evaluate(() => !!(window as any).__condenser?.core?.quickAccessMenuRenderer);
     expect(cacheSet).toBe(true);
   });
 
-  test('caches webpack registry on window.__webpackRegistry', async () => {
-    const cached = await sharedPage.evaluate(
-      () => typeof (window as any).__webpackRegistry === 'object' && (window as any).__webpackRegistry !== null
-    );
+  test('caches webpack registry on window.__condenser.core.webpackRegistry', async () => {
+    const cached = await sharedPage.evaluate(() => {
+      const registry = (window as any).__condenser?.core?.webpackRegistry;
+      return typeof registry === 'object' && registry !== null;
+    });
     expect(cached).toBe(true);
   });
 
   test('populates the renderer type cache', async () => {
-    const hasCache = await sharedPage.evaluate(() => (window as any).__patchedTypeCache != null);
+    const hasCache = await sharedPage.evaluate(() => (window as any).__condenser?.core?.patchedTypeCache != null);
     expect(hasCache).toBe(true);
   });
 
@@ -194,13 +196,13 @@ test.describe('Idempotency', () => {
 
   test('webpack registry is not rebuilt on re-injection', async () => {
     const before = await sharedPage.evaluate(() => {
-      const registry = (window as any).__webpackRegistry;
-      return registry instanceof Map ? registry.size : Object.keys(registry ?? {}).length;
+      const registry = (window as any).__condenser?.core?.webpackRegistry;
+      return registry instanceof Map ? registry.size : 0;
     });
     await sharedPage.evaluate(inject);
     const after = await sharedPage.evaluate(() => {
-      const registry = (window as any).__webpackRegistry;
-      return registry instanceof Map ? registry.size : Object.keys(registry ?? {}).length;
+      const registry = (window as any).__condenser?.core?.webpackRegistry;
+      return registry instanceof Map ? registry.size : 0;
     });
     expect(after).toBe(before);
   });
@@ -260,23 +262,25 @@ test.describe('Stylesheet injection', () => {
 
 test.describe('Component rendering', () => {
 
-  test('transpile + evaluate sets window.__component', async () => {
-    await sharedPage.evaluate(() => { delete (window as any).__injected; });
+  test('transpile + evaluate sets window.__condenser.components[condenser-tab].component', async () => {
+    await sharedPage.evaluate(() => { delete (window as any).__condenser; });
     await sharedPage.evaluate(inject);
 
-    const script = transpile(COUNTER_PATH);
+    const script = transpile(CONDENSER_TAB_PATH, 'condenser-tab');
     await sharedPage.evaluate(script);
 
-    const hasComponent = await sharedPage.evaluate(() => !!(window as any).__component);
+    const hasComponent = await sharedPage.evaluate(
+      () => !!(window as any).__condenser?.components?.['condenser-tab']?.component?.panel
+    );
     expect(hasComponent).toBe(true);
   });
 
-  test('Counter component creates a valid React element with Steam React', async () => {
+  test('QAMTab component creates a valid React element with Steam React', async () => {
     const result = await sharedPage.evaluate((wsUrl: string) => {
-      const Component = (window as any).__component;
+      const Component = (window as any).__condenser?.components?.['condenser-tab']?.component?.panel;
       if (!Component) return { skipped: true };
 
-      const registry: Map<string, any> = (window as any).__webpackRegistry;
+      const registry: Map<string, any> = (window as any).__condenser?.core?.webpackRegistry;
       if (!registry) return { skipped: true };
 
       let React: any = null;
@@ -308,12 +312,12 @@ test.describe('Component rendering', () => {
 
   test('forceUpdate is wired after InjectedTabPanel mounts', async () => {
     const hasForceUpdate = await sharedPage.evaluate(
-      () => typeof (window as any).__forceUpdate === 'function',
+      () => typeof (window as any).__condenser?.components?.['condenser-tab']?.forceUpdate === 'function',
     );
     if (!hasForceUpdate) { test.skip(); return; }
 
     await expect(
-      sharedPage.evaluate(() => { (window as any).__forceUpdate(); })
+      sharedPage.evaluate(() => { (window as any).__condenser.components['condenser-tab'].forceUpdate(); })
     ).resolves.not.toThrow();
   });
 
