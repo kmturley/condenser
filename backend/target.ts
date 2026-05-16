@@ -1,3 +1,4 @@
+/// <reference lib="dom" />
 import puppeteer, { Browser, Page, Target } from 'puppeteer';
 import ts from 'typescript';
 import * as fs from 'fs';
@@ -6,8 +7,7 @@ import { fileURLToPath } from 'url';
 import { createLogger } from '../shared/logger.js';
 
 import { getRuntimeConfig, getModeFromArg, Mode } from '../shared/runtime.js';
-import { inject } from '../frontend/steam/inject.js';
-import { components, componentsDir, sharedPath } from '../frontend/index.js';
+import { components, pluginsDir } from '../frontend/index.js';
 
 interface ChromeVersionInfo {
   Browser: string;
@@ -63,18 +63,23 @@ export function transpile(filePath: string, id?: string): string {
   ].join('\n');
 }
 
-async function loadComponents(page: Page, logger: ReturnType<typeof createLogger>): Promise<void> {
-  if (fs.existsSync(sharedPath)) {
-    await page.evaluate(transpile(sharedPath));
-  }
-  for (const component of components) {
-    if (fs.existsSync(component.path)) {
-      await page.evaluate(transpile(component.path, component.id));
-      logger.info(`Component '${component.id}' loaded`);
-    } else {
-      logger.warn(`Component '${component.id}' not found at`, component.path);
+function makeBootScript(frontendOrigin: string, wsUrl: string, isProduction = false): string {
+  const ext = isProduction ? '.js' : '.ts';
+  const bootUrl = `${frontendOrigin}/frontend/steam/boot${ext}`;
+  return `(async () => {
+    const c = (window.__condenser ||= { core: {}, shared: {}, components: {} });
+    c.core.url = ${JSON.stringify(wsUrl)};
+    await import(${JSON.stringify(bootUrl)} + '?t=' + Date.now());
+  })()`;
+}
+
+function makeReloadScript(id: string, pluginUrl: string): string {
+  return `(async () => {
+    const c = window.__condenser;
+    if (c?.shared?.loadPlugin) {
+      await c.shared.loadPlugin(${JSON.stringify(id)}, ${JSON.stringify(pluginUrl)} + '?t=' + Date.now(), c);
     }
-  }
+  })()`;
 }
 
 async function findSteamSharedContextPage(browser: Browser): Promise<Page | null> {
@@ -97,7 +102,9 @@ async function findSteamSharedContextPage(browser: Browser): Promise<Page | null
 
 async function pageSetup(
   page: Page,
+  frontendOrigin: string,
   websocketUrl: string,
+  isProduction: boolean,
   logger: ReturnType<typeof createLogger>,
 ): Promise<void> {
   const alreadySetup = await page.evaluate(() => {
@@ -111,53 +118,26 @@ async function pageSetup(
   page.on('console', msg => logger.info('[browser]', msg.text()));
   page.setBypassCSP(true);
 
-  await page.evaluate((url: string) => {
-    const c: any = ((window as any).__condenser ||= { core: {}, shared: {}, components: {} });
-    c.core.url = url;
-  }, websocketUrl);
+  const bootExt = isProduction ? '.js' : '.ts';
+  logger.info('Booting via', `${frontendOrigin}/frontend/steam/boot${bootExt}`);
+  await page.evaluate(makeBootScript(frontendOrigin, websocketUrl, isProduction))
+    .catch((e: Error) => logger.error('Boot error:', e.message));
 
-  // Load shared + components first so inject() can read the tab definition.
-  await loadComponents(page, logger);
-
-  let result: any;
-  while (true) {
-    result = await page.evaluate(inject).catch((e: Error) => ({ error: e.message }));
-    logger.info('Inject:', JSON.stringify(result));
-    if (result?.ready === false) {
-      logger.info('Waiting for Steam init, retrying in 2s...');
-      await new Promise(r => setTimeout(r, 2000));
-      continue;
-    }
-    break;
-  }
-
-  if (result?.error && result?.ready !== false) {
-    logger.error('Inject failed:', result.error);
-    return;
-  }
   logger.info('Watching for changes...');
 
-  // Watch shared — reload shared then all components on any change
-  const sharedDir = path.dirname(sharedPath);
-  if (fs.existsSync(sharedDir)) {
-    fs.watch(sharedDir, { recursive: true }, async (_, filename) => {
+  // Watch plugins dir — hot reload only the changed plugin
+  const componentsByDir = new Map(components.map(c => [c.id, c]));
+  if (fs.existsSync(pluginsDir)) {
+    fs.watch(pluginsDir, { recursive: true }, async (_, filename) => {
       if (!filename || (!filename.endsWith('.tsx') && !filename.endsWith('.ts'))) return;
-      logger.info('[reload shared]', filename);
-      try { await loadComponents(page, logger); }
-      catch (e) { logger.error('[reload error]', (e as Error).message); }
-    });
-  }
-
-  // Watch components dir — hot reload only the changed component
-  const componentsByFilename = new Map(components.map(c => [path.basename(c.path), c]));
-  if (fs.existsSync(componentsDir)) {
-    fs.watch(componentsDir, { recursive: true }, async (_, filename) => {
-      if (!filename || (!filename.endsWith('.tsx') && !filename.endsWith('.ts'))) return;
-      const component = componentsByFilename.get(filename);
-      if (!component || !fs.existsSync(component.path)) return;
+      const pluginId = filename.split(path.sep)[0];
+      const component = componentsByDir.get(pluginId);
+      if (!component) return;
+      const pluginUrl = `${frontendOrigin}${component.vitePath}`;
       logger.info('[reload]', component.id);
-      try { await page.evaluate(transpile(component.path, component.id)); }
-      catch (e) { logger.error('[reload error]', (e as Error).message); }
+      try {
+        await page.evaluate(makeReloadScript(component.id, pluginUrl));
+      } catch (e) { logger.error('[reload error]', (e as Error).message); }
     });
   }
 
@@ -172,15 +152,8 @@ async function pageSetup(
     }).catch(() => {});
 
     logger.info('Page navigated — reinjecting...');
-
-    await page.evaluate((url: string) => {
-      const c: any = ((window as any).__condenser ||= { core: {}, shared: {}, components: {} });
-      c.core.url = url;
-    }, websocketUrl);
-
-    await loadComponents(page, logger);
-    const reResult = await page.evaluate(inject).catch((e: Error) => ({ error: e.message }));
-    logger.info('Reinjection:', JSON.stringify(reResult));
+    await page.evaluate(makeBootScript(frontendOrigin, websocketUrl, isProduction))
+      .catch((e: Error) => logger.error('Reinjection error:', e.message));
   });
 }
 
@@ -229,7 +202,7 @@ export async function startDiscovery(mode: Mode) {
     for (const browser of browsers) {
       const page = await findSteamSharedContextPage(browser);
       if (page) {
-        await pageSetup(page, config.backendWsOrigin, logger);
+        await pageSetup(page, config.frontendOrigin, config.backendWsOrigin, config.isProduction, logger);
       } else {
         logger.warn('SharedJSContext not found — is Steam running in game mode?');
       }
@@ -242,7 +215,7 @@ export async function startDiscovery(mode: Mode) {
           const title = await newPage.title().catch(() => '');
           const url = newPage.url();
           if (isSteamSharedContextTab(title, url)) {
-            await pageSetup(newPage, config.backendWsOrigin, logger);
+            await pageSetup(newPage, config.frontendOrigin, config.backendWsOrigin, config.isProduction, logger);
           }
         } catch {}
       });

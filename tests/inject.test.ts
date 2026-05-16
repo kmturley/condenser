@@ -15,6 +15,7 @@ import { test, expect, chromium } from '@playwright/test';
 import type { Browser, Page } from '@playwright/test';
 import { inject } from '../frontend/steam/inject.js';
 import { isSteamSharedContextTab, transpile } from '../backend/target.js';
+import { sharedPath } from '../frontend/index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const STEAM_DEBUG_URL = 'http://localhost:8080';
@@ -41,6 +42,8 @@ test.beforeAll(async () => {
   const page = await findSteamSharedContextPage(browser);
   if (!page) throw new Error('SharedJSContext page not found after globalSetup');
   sharedPage = page;
+  // Load shared utilities so inject() tests can call condenser.shared.* methods.
+  await sharedPage.evaluate(transpile(sharedPath));
 });
 
 test.afterAll(async () => {
@@ -143,6 +146,8 @@ test.describe('Injection', () => {
 
   test('inject() returns { ready: true, success: true }', async () => {
     await sharedPage.evaluate(() => { delete (window as any).__condenser; });
+    await sharedPage.evaluate(transpile(sharedPath));
+    await sharedPage.evaluate(transpile(CONDENSER_TAB_PATH, 'condenser-tab'));
     const result = await sharedPage.evaluate(inject) as any;
 
     expect(result.ready).toBe(true);
@@ -264,6 +269,7 @@ test.describe('Component rendering', () => {
 
   test('transpile + evaluate sets window.__condenser.components[condenser-tab].component', async () => {
     await sharedPage.evaluate(() => { delete (window as any).__condenser; });
+    await sharedPage.evaluate(transpile(sharedPath));
     await sharedPage.evaluate(inject);
 
     const script = transpile(CONDENSER_TAB_PATH, 'condenser-tab');

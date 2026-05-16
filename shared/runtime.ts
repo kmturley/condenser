@@ -102,7 +102,7 @@ export function getRuntimeConfig(mode: Mode): RuntimeConfig {
 export function getTlsOptions(mode: Mode) {
   const config = getRuntimeConfig(mode);
   if (!existsSync(config.certPath) || !existsSync(config.keyPath)) {
-    return false;
+    return undefined;
   }
 
   return {

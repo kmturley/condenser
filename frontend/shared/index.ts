@@ -5,6 +5,80 @@
 
 const condenser: any = ((window as any).__condenser ||= { core: {}, shared: {}, components: {} });
 
+// Connects to the backend WebSocket, requests the plugin list, and handles
+// hot-reload events for the lifetime of the page.
+condenser.shared.initPluginLoader = function initPluginLoader(condenser: any): void {
+  const wsUrl: string = condenser.core.url;
+  if (!wsUrl) { console.warn('[condenser] initPluginLoader: no WS URL set'); return; }
+
+  const httpUrl = wsUrl.replace(/^wss:/, 'https:').replace(/^ws:/, 'http:');
+  let ws: WebSocket | null = null;
+  let callId = 0;
+
+  const connect = async () => {
+    let token: string;
+    try {
+      const res = await fetch(`${httpUrl}/auth/token`);
+      const json = await res.json();
+      token = json.token;
+      condenser.core.csrfToken = token;
+    } catch (e: any) {
+      console.error('[condenser] Failed to fetch auth token:', e.message);
+      setTimeout(connect, 3000);
+      return;
+    }
+
+    ws = new WebSocket(`${wsUrl}?auth=${token}`);
+
+    ws.onerror = () => {
+      const certUrl = wsUrl.replace(/^wss:/, 'https:').replace(/^ws:/, 'http:');
+      console.info('[condenser] If certificate issue, open ' + certUrl + ' in browser once');
+    };
+
+    ws.onopen = () => {
+      ws!.send(JSON.stringify({ type: 0, route: 'get-plugins', id: ++callId }));
+    };
+
+    ws.onmessage = async (event: MessageEvent) => {
+      const msg = JSON.parse(event.data);
+      if (msg.type === 1 && Array.isArray(msg.result)) {
+        for (const { id, url } of msg.result) {
+          await condenser.shared.loadPlugin(id, url, condenser);
+        }
+      }
+      if (msg.type === 3 && msg.event === 'plugin-updated') {
+        await condenser.shared.loadPlugin(msg.id, msg.url, condenser);
+      }
+    };
+
+    ws.onclose = () => {
+      ws = null;
+      setTimeout(connect, 3000);
+    };
+  };
+
+  connect();
+};
+
+// Dynamically imports a plugin module at the given URL and registers it.
+condenser.shared.loadPlugin = async function loadPlugin(
+  id: string,
+  url: string,
+  condenser: any,
+): Promise<void> {
+  try {
+    const mod = await import(/* @vite-ignore */ url);
+    const ns: any = (condenser.components[id] ||= {});
+    // Support both factory functions (definePlugin) and plain config objects.
+    ns.component = typeof mod.default === 'function' ? mod.default() : mod.default;
+    condenser.shared.renderComponent(id, condenser);
+    ns.forceUpdate?.();
+    console.info('[condenser] Loaded plugin', id);
+  } catch (e: any) {
+    console.error('[condenser] Failed to load plugin', id, e.message);
+  }
+};
+
 condenser.shared.useWebSocket = function useWebSocket(React: any, url: string) {
   const [count, setCount] = React.useState(0);
   const wsRef = React.useRef(null as WebSocket | null);
@@ -13,7 +87,9 @@ condenser.shared.useWebSocket = function useWebSocket(React: any, url: string) {
     let reconnectTimeout: ReturnType<typeof setTimeout>;
 
     const connect = () => {
-      const socket = new WebSocket(url);
+      const token = (window as any).__condenser?.core?.csrfToken;
+      const fullUrl = token ? `${url}?auth=${token}` : url;
+      const socket = new WebSocket(fullUrl);
       wsRef.current = socket;
 
       socket.onerror = () => {
@@ -217,12 +293,16 @@ condenser.shared.appendTab = function appendTab(
   let titleClassName = '';
 
   function InjectedTabPanel(props: any) {
-    const [, setTick] = props.React.useState(0);
+    const R = (window as any).__condenser.core.React;
+    const [, setTick] = R.useState(0);
     const ns = (condenser.components[props.id] ||= {});
-    ns.forceUpdate = () => setTick((t: number) => t + 1);
+    R.useLayoutEffect(() => {
+      ns.forceUpdate = () => setTick((t: number) => t + 1);
+      return () => { ns.forceUpdate = undefined; };
+    }, []);
     const Panel = ns.component?.panel;
     return Panel
-      ? props.React.createElement(Panel, { React: props.React, websocketUrl: condenser.core.url })
+      ? R.createElement(Panel, { websocketUrl: condenser.core.url })
       : null;
   }
 
@@ -245,7 +325,7 @@ condenser.shared.appendTab = function appendTab(
         key: def.key,
         tab: def.tab(React),
         initialVisibility: false,
-        panel: React.createElement(InjectedTabPanel, { React, id }),
+        panel: React.createElement(InjectedTabPanel, { id }),
         title: titleClassName
           ? React.createElement('div', { className: titleClassName }, def.title ?? def.key)
           : def.tab(React),
