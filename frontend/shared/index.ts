@@ -12,8 +12,6 @@ condenser.shared.initPluginLoader = function initPluginLoader(condenser: any): v
   if (!wsUrl) { console.warn('[condenser] initPluginLoader: no WS URL set'); return; }
 
   const httpUrl = wsUrl.replace(/^wss:/, 'https:').replace(/^ws:/, 'http:');
-  let ws: WebSocket | null = null;
-  let callId = 0;
 
   const connect = async () => {
     let token: string;
@@ -28,22 +26,30 @@ condenser.shared.initPluginLoader = function initPluginLoader(condenser: any): v
       return;
     }
 
-    ws = new WebSocket(`${wsUrl}?auth=${token}`);
+    const ws = new WebSocket(`${wsUrl}?auth=${token}`);
+    condenser.core.ws = ws;
 
     ws.onerror = () => {
       const certUrl = wsUrl.replace(/^wss:/, 'https:').replace(/^ws:/, 'http:');
       console.info('[condenser] If certificate issue, open ' + certUrl + ' in browser once');
     };
 
-    ws.onopen = () => {
-      ws!.send(JSON.stringify({ type: 0, route: 'get-plugins', id: ++callId }));
+    ws.onopen = async () => {
+      const plugins = await condenser.shared.callPlugin('get-plugins');
+      if (Array.isArray(plugins)) {
+        for (const { id, url } of plugins) {
+          await condenser.shared.loadPlugin(id, url, condenser);
+        }
+      }
     };
 
     ws.onmessage = async (event: MessageEvent) => {
       const msg = JSON.parse(event.data);
-      if (msg.type === 1 && Array.isArray(msg.result)) {
-        for (const { id, url } of msg.result) {
-          await condenser.shared.loadPlugin(id, url, condenser);
+      if (msg.type === 1) {
+        const pending = condenser.core.pendingCalls?.get(msg.id);
+        if (pending) {
+          condenser.core.pendingCalls.delete(msg.id);
+          msg.error ? pending.reject(new Error(msg.error)) : pending.resolve(msg.result);
         }
       }
       if (msg.type === 3 && msg.event === 'plugin-updated') {
@@ -52,12 +58,27 @@ condenser.shared.initPluginLoader = function initPluginLoader(condenser: any): v
     };
 
     ws.onclose = () => {
-      ws = null;
+      condenser.core.ws = null;
       setTimeout(connect, 3000);
     };
   };
 
   connect();
+};
+
+condenser.shared.callPlugin = function callPlugin(route: string, params?: unknown): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const ws: WebSocket = condenser.core.ws;
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      reject(new Error('[condenser] WebSocket not connected'));
+      return;
+    }
+    condenser.core.pendingCalls ??= new Map();
+    condenser.core.callSeq ??= 0;
+    const id = ++condenser.core.callSeq;
+    condenser.core.pendingCalls.set(id, { resolve, reject });
+    ws.send(JSON.stringify({ type: 0, route, id, params }));
+  });
 };
 
 // Dynamically imports a plugin module at the given URL and registers it.
@@ -69,8 +90,10 @@ condenser.shared.loadPlugin = async function loadPlugin(
   try {
     const mod = await import(/* @vite-ignore */ url);
     const ns: any = (condenser.components[id] ||= {});
-    // Support both factory functions (definePlugin) and plain config objects.
-    ns.component = typeof mod.default === 'function' ? mod.default() : mod.default;
+    const api = {
+      send: (action: string, data?: unknown) => condenser.shared.callPlugin(id, { action, data }),
+    };
+    ns.component = typeof mod.default === 'function' ? mod.default(api) : mod.default;
     condenser.shared.renderComponent(id, condenser);
     ns.forceUpdate?.();
     console.info('[condenser] Loaded plugin', id);

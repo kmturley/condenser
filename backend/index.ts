@@ -8,6 +8,7 @@ import { createLogger } from '../shared/logger.js';
 import { getModeFromArg, getRuntimeConfig, getTlsOptions, Mode } from '../shared/runtime.js';
 import { components } from '../frontend/index.js';
 import { WsRouter } from './ws-router.js';
+import { loadPlugins } from './plugin-loader.js';
 
 export const SERVER_PORT: number = 3001;
 
@@ -19,7 +20,7 @@ const MIME: Record<string, string> = {
   '.map':  'application/json',
 };
 
-function startServer(mode: Mode) {
+async function startServer(mode: Mode) {
   const config = getRuntimeConfig(mode);
   const logger = createLogger('server', config.enableDebugLogs);
   const sslOptions = getTlsOptions(mode);
@@ -36,8 +37,7 @@ function startServer(mode: Mode) {
     })),
   );
 
-  let clickCount = 0;
-  router.register('click', () => ({ count: ++clickCount }));
+  await loadPlugins(router, clients);
 
   const handleRequest = (req: IncomingMessage, res: ServerResponse) => {
     if (req.url === '/auth/token') {

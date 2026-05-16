@@ -10,5 +10,5 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["index.tsx"]
+  "include": ["index.tsx", "condenser.d.ts", "../plugins/**/*.tsx", "../plugins/**/*.ts"]
 }

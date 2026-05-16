@@ -32,8 +32,9 @@ if (condenser.core.booted) {
   }
 
   if (import.meta.hot) {
+    const viteOrigin = new URL(import.meta.url).origin;
     import.meta.hot.on('condenser:plugin-updated', ({ id, url }: { id: string; url: string }) => {
-      condenser.shared.loadPlugin(id, `${location.origin}${url}?t=${Date.now()}`, condenser);
+      condenser.shared.loadPlugin(id, `${viteOrigin}${url}?t=${Date.now()}`, condenser);
     });
   }
 }
