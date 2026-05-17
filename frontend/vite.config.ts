@@ -61,7 +61,7 @@ export function useSend(pluginId) {
 // Build entry points: boot.ts + one per plugin frontend.tsx
 function getPluginEntries(): Record<string, string> {
   const entries: Record<string, string> = {
-    'frontend/steam/boot': path.join(__dirname, 'steam', 'boot.ts'),
+    'frontend/index': path.join(__dirname, 'index.ts'),
   };
   const pluginsDir = path.join(projectRoot, 'plugins');
   if (existsSync(pluginsDir)) {

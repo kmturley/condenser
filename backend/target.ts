@@ -65,7 +65,7 @@ export function transpile(filePath: string, id?: string): string {
 
 function makeBootScript(frontendOrigin: string, wsUrl: string, isProduction = false): string {
   const ext = isProduction ? '.js' : '.ts';
-  const bootUrl = `${frontendOrigin}/frontend/steam/boot${ext}`;
+  const bootUrl = `${frontendOrigin}/frontend/index${ext}`;
   return `(async () => {
     const c = (window.__condenser ||= { core: {}, shared: {}, components: {} });
     c.core.url = ${JSON.stringify(wsUrl)};
@@ -76,8 +76,8 @@ function makeBootScript(frontendOrigin: string, wsUrl: string, isProduction = fa
 function makeReloadScript(id: string, pluginUrl: string): string {
   return `(async () => {
     const c = window.__condenser;
-    if (c?.shared?.loadPlugin) {
-      await c.shared.loadPlugin(${JSON.stringify(id)}, ${JSON.stringify(pluginUrl)} + '?t=' + Date.now(), c);
+    if (c?.plugins?.loadPlugin) {
+      await c.plugins.loadPlugin(${JSON.stringify(id)}, ${JSON.stringify(pluginUrl)} + '?t=' + Date.now());
     }
   })()`;
 }
@@ -119,7 +119,7 @@ async function pageSetup(
   page.setBypassCSP(true);
 
   const bootExt = isProduction ? '.js' : '.ts';
-  logger.info('Booting via', `${frontendOrigin}/frontend/steam/boot${bootExt}`);
+  logger.info('Booting via', `${frontendOrigin}/frontend/index${bootExt}`);
   await page.evaluate(makeBootScript(frontendOrigin, websocketUrl, isProduction))
     .catch((e: Error) => logger.error('Boot error:', e.message));
 
