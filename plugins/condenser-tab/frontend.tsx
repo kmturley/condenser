@@ -1,10 +1,14 @@
 /// <reference lib="dom" />
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { definePlugin } from 'condenser:plugin';
 
 export default definePlugin((api: any) => {
   function CondenserTab() {
     const [count, setCount] = useState(0);
+
+    useEffect(() => {
+      api.send('get-count').then((result: any) => setCount(result.count));
+    }, []);
 
     const handleClick = async () => {
       const result = await api.send('click');

@@ -13,7 +13,9 @@ export function onMessage(
   _data: unknown,
   respond: (result: unknown) => void,
 ): void {
-  if (action === 'click') {
+  if (action === 'get-count') {
+    respond({ count: clickCount });
+  } else if (action === 'click') {
     respond({ count: ++clickCount });
   }
 }
