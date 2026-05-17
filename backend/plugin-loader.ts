@@ -11,10 +11,12 @@ export interface BackendAPI {
   emit(event: string, data?: Record<string, unknown>): void;
 }
 
+const RESERVED = new Set(['onLoad', 'onUnload']);
+
 interface PluginBackend {
   onLoad?(api: BackendAPI): void;
   onUnload?(): void;
-  onMessage?(action: string, data: unknown, respond: (result: unknown) => void): void;
+  [action: string]: unknown;
 }
 
 export async function loadPlugins(router: WsRouter, clients: Set<WebSocket>): Promise<void> {
@@ -43,11 +45,16 @@ async function loadPlugin(
 
   mod.onLoad?.(api);
 
-  if (mod.onMessage) {
-    router.register(id, (params: any) =>
-      new Promise((resolve) => {
-        mod.onMessage!(params?.action ?? '', params?.data, resolve);
-      }),
-    );
+  const actions = Object.entries(mod).filter(
+    ([name, fn]) => typeof fn === 'function' && !RESERVED.has(name),
+  );
+
+  if (actions.length > 0) {
+    router.register(id, async (params: any) => {
+      const action: string = params?.action ?? '';
+      const fn = mod[action];
+      if (typeof fn !== 'function') throw new Error(`Unknown action: ${action}`);
+      return (fn as (...args: unknown[]) => unknown)(params?.data);
+    });
   }
 }

@@ -90,10 +90,13 @@ condenser.shared.loadPlugin = async function loadPlugin(
   try {
     const mod = await import(/* @vite-ignore */ url);
     const ns: any = (condenser.components[id] ||= {});
-    const api = {
-      send: (action: string, data?: unknown) => condenser.shared.callPlugin(id, { action, data }),
+    ns.component = {
+      target: mod.target,
+      key: mod.key ?? id,
+      title: mod.title,
+      tab: mod.Tab,
+      panel: mod.Panel,
     };
-    ns.component = typeof mod.default === 'function' ? mod.default(api) : mod.default;
     condenser.shared.renderComponent(id, condenser);
     ns.forceUpdate?.();
     console.info('[condenser] Loaded plugin', id);

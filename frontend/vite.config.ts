@@ -18,7 +18,7 @@ const condenserShims: Plugin = {
   resolveId(id) {
     if (id === 'react') return '\0virtual:condenser-react';
     if (id === 'react/jsx-runtime' || id === 'react/jsx-dev-runtime') return '\0virtual:condenser-react-jsx';
-    if (id === 'condenser:plugin') return '\0virtual:condenser-plugin';
+    if (id === 'condenser:api') return '\0virtual:condenser-api';
     return null;
   },
   load(id) {
@@ -36,8 +36,14 @@ export const jsxs = R.createElement;
 export const jsxDEV = R.createElement;
 export const Fragment = R.Fragment;`;
     }
-    if (id === '\0virtual:condenser-plugin') {
-      return `export function definePlugin(factory) { return factory; }`;
+    if (id === '\0virtual:condenser-api') {
+      return `const R = window.__condenser.core.React;
+export function useSend(pluginId) {
+  return R.useCallback(
+    (action, data) => window.__condenser.shared.callPlugin(pluginId, { action, data }),
+    [pluginId],
+  );
+}`;
     }
     return null;
   },
@@ -75,7 +81,7 @@ export default defineConfig({
     condenserShims,
   ],
   optimizeDeps: {
-    exclude: ['react', 'react/jsx-runtime', 'react/jsx-dev-runtime', 'condenser:plugin'],
+    exclude: ['react', 'react/jsx-runtime', 'react/jsx-dev-runtime', 'condenser:api'],
   },
   build: {
     outDir: 'dist',
