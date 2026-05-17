@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 import { createLogger } from '../shared/logger.js';
 
 import { getRuntimeConfig, getModeFromArg, Mode } from '../shared/runtime.js';
-import { components, pluginsDir } from '../frontend/index.js';
+import { discoverPlugins, pluginsDir } from './plugins.js';
 
 interface ChromeVersionInfo {
   Browser: string;
@@ -126,7 +126,7 @@ async function pageSetup(
   logger.info('Watching for changes...');
 
   // Watch plugins dir — hot reload only the changed plugin
-  const componentsByDir = new Map(components.map(c => [c.id, c]));
+  const componentsByDir = new Map(discoverPlugins().map(c => [c.id, c]));
   if (fs.existsSync(pluginsDir)) {
     fs.watch(pluginsDir, { recursive: true }, async (_, filename) => {
       if (!filename || (!filename.endsWith('.tsx') && !filename.endsWith('.ts'))) return;

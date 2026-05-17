@@ -6,7 +6,7 @@ import { createServer as createHttpsServer } from 'https';
 import { createServer as createHttpServer, IncomingMessage, ServerResponse } from 'http';
 import { createLogger } from '../shared/logger.js';
 import { getModeFromArg, getRuntimeConfig, getTlsOptions, Mode } from '../shared/runtime.js';
-import { components } from '../frontend/index.js';
+import { discoverPlugins } from './plugins.js';
 import { WsRouter } from './ws-router.js';
 import { loadPlugins } from './plugin-loader.js';
 
@@ -29,7 +29,7 @@ async function startServer(mode: Mode) {
   const router = new WsRouter();
 
   router.register('get-plugins', () =>
-    components.map(c => ({
+    discoverPlugins().map(c => ({
       id: c.id,
       url: config.isProduction
         ? `${config.frontendOrigin}${c.vitePath.replace(/\.tsx$/, '.js')}`

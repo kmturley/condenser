@@ -6,7 +6,7 @@
 //   await import('http://localhost:3000/steam/boot.ts?v=...')
 // All real setup happens here.
 
-import '../shared/index.ts'; // side-effect: populates window.__condenser.shared.*
+import '../index.js'; // side-effect: populates window.__condenser.{tree,steam,qam,plugins}
 
 // Satisfy @vitejs/plugin-react Fast Refresh preamble check so dynamically-imported
 // plugin files don't throw. $RefreshReg$/$RefreshSig$ are no-ops — our own
@@ -23,18 +23,18 @@ if (condenser.core.booted) {
   condenser.core.booted = true;
 
   // 1. Discover React, ReactDOM and Steam views
-  const contextError = condenser.shared.discoverSteamContext(condenser);
+  const contextError = condenser.steam.discoverSteamContext();
   if (contextError) {
     console.error('[condenser] Context error:', contextError);
   } else {
     // 2. Connect to backend WS and initiate plugin loading
-    await condenser.shared.initPluginLoader(condenser);
+    condenser.plugins.initPluginLoader();
   }
 
   if (import.meta.hot) {
     const viteOrigin = new URL(import.meta.url).origin;
     import.meta.hot.on('condenser:plugin-updated', ({ id, url }: { id: string; url: string }) => {
-      condenser.shared.loadPlugin(id, `${viteOrigin}${url}?t=${Date.now()}`, condenser);
+      condenser.plugins.loadPlugin(id, `${viteOrigin}${url}?t=${Date.now()}`);
     });
   }
 }

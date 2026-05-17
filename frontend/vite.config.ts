@@ -40,7 +40,7 @@ export const Fragment = R.Fragment;`;
       return `const R = window.__condenser.core.React;
 export function useSend(pluginId) {
   return R.useCallback(
-    (action, data) => window.__condenser.shared.callPlugin(pluginId, { action, data }),
+    (action, data) => window.__condenser.plugins.callPlugin(pluginId, { action, data }),
     [pluginId],
   );
 }`;
