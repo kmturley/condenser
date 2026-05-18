@@ -1,6 +1,7 @@
 /// <reference lib="dom" />
 
 import { findInElementTree, findInFiberTree, getReactFiberRoot } from './tree.js';
+import { getCondenser } from './condenser.js';
 
 export function wrapReturnValue(
   object: any,
@@ -15,14 +16,14 @@ export function wrapReturnValue(
 }
 
 export function renderComponent(id: string): void {
-  const condenser = (window as any).__condenser;
+  const condenser = getCondenser();
   const def = condenser.components[id]?.component;
   if (!def?.target) return;
   if (def.target === 'quick-access-menu') activateQuickAccessMenu();
 }
 
 export function activateQuickAccessMenu(): void {
-  const condenser = (window as any).__condenser;
+  const condenser = getCondenser();
   if (condenser.core.patched) return;
   condenser.core.patched = true;
 
@@ -63,12 +64,12 @@ export function activateQuickAccessMenu(): void {
 export function appendTab(
   target: string,
 ): (args: any[], returnValue: any) => any {
-  const condenser = (window as any).__condenser;
+  const condenser = getCondenser();
   const React = condenser.core.React;
   let titleClassName = '';
 
   function InjectedTabPanel(props: any) {
-    const R = (window as any).__condenser.core.React;
+    const R = condenser.core.React;
     const [, setTick] = R.useState(0);
     const ns = (condenser.components[props.id] ||= {});
     R.useLayoutEffect(() => {

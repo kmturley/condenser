@@ -1,5 +1,7 @@
 /// <reference lib="dom" />
 
+import { getCondenser } from './condenser.js';
+
 export function buildWebpackRegistry(): Map<string, any> {
   const chunkArray = (window as any).webpackChunksteamui as any[][];
   if (!chunkArray) throw new Error('webpackChunksteamui not found');
@@ -40,7 +42,7 @@ export function findWebpackModuleByExport(
 }
 
 export function discoverSteamContext(): string | null {
-  const condenser = (window as any).__condenser;
+  const condenser = getCondenser();
   const registry: Map<string, any> = condenser.core.webpackRegistry
     ?? (condenser.core.webpackRegistry = buildWebpackRegistry());
 

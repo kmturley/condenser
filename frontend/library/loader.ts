@@ -2,9 +2,10 @@
 
 import { renderComponent } from './qam.js';
 import { MessageType, Route, WsEvent, Auth } from '../../shared/protocol.js';
+import { getCondenser } from './condenser.js';
 
 export function callPlugin(route: string, params?: unknown): Promise<any> {
-  const condenser = (window as any).__condenser;
+  const condenser = getCondenser();
   return new Promise((resolve, reject) => {
     const ws: WebSocket = condenser.core.ws;
     if (!ws || ws.readyState !== WebSocket.OPEN) {
@@ -20,7 +21,7 @@ export function callPlugin(route: string, params?: unknown): Promise<any> {
 }
 
 export async function loadPlugin(id: string, url: string): Promise<void> {
-  const condenser = (window as any).__condenser;
+  const condenser = getCondenser();
   try {
     const mod = await import(/* @vite-ignore */ url);
     const ns: any = (condenser.components[id] ||= {});
@@ -40,7 +41,7 @@ export async function loadPlugin(id: string, url: string): Promise<void> {
 }
 
 export function initPluginLoader(): void {
-  const condenser = (window as any).__condenser;
+  const condenser = getCondenser();
   const wsUrl: string = condenser.core.url;
   if (!wsUrl) { console.warn('[condenser] initPluginLoader: no WS URL set'); return; }
 

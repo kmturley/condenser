@@ -1,6 +1,8 @@
 /// <reference lib="dom" />
 /// <reference types="vite/client" />
 
+import { getCondenser } from './condenser.js';
+
 export function installPreamble(): void {
   (window as any).__vite_plugin_react_preamble_installed__ = true;
   (window as any).$RefreshReg$ ??= () => {};
@@ -8,7 +10,7 @@ export function installPreamble(): void {
 }
 
 export function boot(): void {
-  const condenser = (window as any).__condenser;
+  const condenser = getCondenser();
   if (condenser.core.booted) {
     console.info('[condenser] already loaded — skipping');
     return;
