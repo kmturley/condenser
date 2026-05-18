@@ -9,25 +9,9 @@ export function createLogger(scope: string, enabled = true): Logger {
   const prefix = `[${scope}]`;
 
   return {
-    debug: (...args: unknown[]) => {
-      if (enabled) {
-        console.log(prefix, ...args);
-      }
-    },
-    info: (...args: unknown[]) => {
-      if (enabled) {
-        console.log(prefix, ...args);
-      }
-    },
-    warn: (...args: unknown[]) => {
-      if (enabled) {
-        console.warn(prefix, ...args);
-      }
-    },
-    error: (...args: unknown[]) => {
-      if (enabled) {
-        console.error(prefix, ...args);
-      }
-    },
+    debug: (...args: unknown[]) => { if (enabled) console.debug(prefix, ...args); },
+    info:  (...args: unknown[]) => { if (enabled) console.log(prefix, ...args); },
+    warn:  (...args: unknown[]) => console.warn(prefix, ...args),
+    error: (...args: unknown[]) => console.error(prefix, ...args),
   };
 }

@@ -29,7 +29,6 @@ export function activateQuickAccessMenu(): void {
   const renderer = condenser.core.quickAccessMenuRenderer;
   if (!renderer) return;
 
-  const React = condenser.core.React;
   const patchedTypeCache: Map<any, any> =
     condenser.core.patchedTypeCache ?? (condenser.core.patchedTypeCache = new Map());
 
@@ -42,7 +41,7 @@ export function activateQuickAccessMenu(): void {
       } else {
         const originalType = innerElement.type;
         if (typeof originalType === 'function') {
-          wrapReturnValue(innerElement, 'type', appendTab('quick-access-menu', React));
+          wrapReturnValue(innerElement, 'type', appendTab('quick-access-menu'));
         }
         patchedTypeCache.set(originalType, innerElement.type);
       }
@@ -63,9 +62,9 @@ export function activateQuickAccessMenu(): void {
 
 export function appendTab(
   target: string,
-  React: any,
 ): (args: any[], returnValue: any) => any {
   const condenser = (window as any).__condenser;
+  const React = condenser.core.React;
   let titleClassName = '';
 
   function InjectedTabPanel(props: any) {

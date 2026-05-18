@@ -3,6 +3,7 @@ import WebSocket from 'ws';
 export const MessageType = {
   CALL: 0,
   REPLY: 1,
+  // 2 is intentionally reserved for future use
   EVENT: 3,
 } as const;
 

@@ -10,8 +10,6 @@ import { discoverPlugins } from './plugins.js';
 import { WsRouter } from './ws-router.js';
 import { loadPlugins } from './plugin-loader.js';
 
-export const SERVER_PORT: number = 3001;
-
 const MIME: Record<string, string> = {
   '.js':   'application/javascript',
   '.css':  'text/css',

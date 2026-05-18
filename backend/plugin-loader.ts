@@ -1,11 +1,9 @@
 import path from 'path';
-import { fileURLToPath, pathToFileURL } from 'url';
+import { pathToFileURL } from 'url';
 import { existsSync, readdirSync } from 'fs';
 import WebSocket from 'ws';
 import { WsRouter, broadcastEvent } from './ws-router.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const pluginsDir = path.join(__dirname, '..', 'plugins');
+import { pluginsDir } from './plugins.js';
 
 export interface BackendAPI {
   emit(event: string, data?: Record<string, unknown>): void;

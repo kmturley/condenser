@@ -1,6 +1,5 @@
 /// <reference lib="dom" />
 import puppeteer, { Browser, Page, Target } from 'puppeteer';
-import ts from 'typescript';
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
@@ -35,39 +34,11 @@ export function isSteamSharedContextTab(title: string, url: string): boolean {
   );
 }
 
-export function transpile(filePath: string, id?: string): string {
-  const source = fs.readFileSync(filePath, 'utf8');
-  const { outputText } = ts.transpileModule(source, {
-    compilerOptions: {
-      module: ts.ModuleKind.CommonJS,
-      target: ts.ScriptTarget.ES2020,
-      jsx: ts.JsxEmit.React,
-    },
-  });
-
-  if (id !== undefined) {
-    return [
-      '(function() { const module = { exports: {} }; const exports = module.exports;',
-      outputText,
-      `const ns = (window.__condenser.components[${JSON.stringify(id)}] ||= {});`,
-      'ns.component = module.exports.default ?? module.exports;',
-      'ns.forceUpdate?.();',
-      '})();',
-    ].join('\n');
-  }
-
-  return [
-    '(function() { const module = { exports: {} }; const exports = module.exports;',
-    outputText,
-    '})();',
-  ].join('\n');
-}
-
 function makeBootScript(frontendOrigin: string, wsUrl: string, isProduction = false): string {
   const ext = isProduction ? '.js' : '.ts';
   const bootUrl = `${frontendOrigin}/frontend/index${ext}`;
   return `(async () => {
-    const c = (window.__condenser ||= { core: {}, shared: {}, components: {} });
+    const c = (window.__condenser ||= { core: {}, components: {} });
     c.core.url = ${JSON.stringify(wsUrl)};
     await import(${JSON.stringify(bootUrl)} + '?t=' + Date.now());
   })()`;
@@ -108,7 +79,7 @@ async function pageSetup(
   logger: ReturnType<typeof createLogger>,
 ): Promise<void> {
   const alreadySetup = await page.evaluate(() => {
-    const c: any = ((window as any).__condenser ||= { core: {}, shared: {}, components: {} });
+    const c: any = ((window as any).__condenser ||= { core: {}, components: {} });
     if (c.core.setup) return true;
     c.core.setup = true;
     return false;
