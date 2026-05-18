@@ -3,6 +3,7 @@ import { fileURLToPath } from 'url';
 import { existsSync, readdirSync } from 'fs';
 import { defineConfig, Plugin } from 'vite';
 import { getRuntimeConfig, getTlsOptions, getModeFromArg } from '../shared/runtime';
+import { PluginConvention } from '../shared/plugin';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
@@ -51,9 +52,9 @@ export function useSend(pluginId) {
     if (!file.startsWith(path.join(projectRoot, 'plugins') + path.sep)) return;
     const rel = path.relative(path.join(projectRoot, 'plugins'), file);
     const parts = rel.split(path.sep);
-    if (parts.length < 2 || path.basename(file) !== 'frontend.tsx') return;
+    if (parts.length < 2 || path.basename(file) !== PluginConvention.FRONTEND_FILE) return;
     const pluginId = parts[0];
-    server.hot.send({ type: 'custom', event: 'condenser:plugin-updated', data: { id: pluginId, url: `/plugins/${pluginId}/frontend.tsx` } });
+    server.hot.send({ type: 'custom', event: 'condenser:plugin-updated', data: { id: pluginId, url: `${PluginConvention.URL_PREFIX}${pluginId}/${PluginConvention.FRONTEND_FILE}` } });
     return [];
   },
 };
@@ -67,7 +68,7 @@ function getPluginEntries(): Record<string, string> {
   if (existsSync(pluginsDir)) {
     for (const d of readdirSync(pluginsDir, { withFileTypes: true })) {
       if (!d.isDirectory()) continue;
-      const fp = path.join(pluginsDir, d.name, 'frontend.tsx');
+      const fp = path.join(pluginsDir, d.name, PluginConvention.FRONTEND_FILE);
       if (existsSync(fp)) {
         entries[`plugins/${d.name}/frontend`] = fp;
       }

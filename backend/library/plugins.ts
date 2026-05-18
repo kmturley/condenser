@@ -1,6 +1,7 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync, readdirSync } from 'fs';
+import { PluginConvention } from '../../shared/plugin.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -18,8 +19,8 @@ export function discoverPlugins(): PluginEntry[] {
     .filter(d => d.isDirectory())
     .map(d => ({
       id: d.name,
-      path: path.join(pluginsDir, d.name, 'frontend.tsx'),
-      vitePath: `/plugins/${d.name}/frontend.tsx`,
+      path: path.join(pluginsDir, d.name, PluginConvention.FRONTEND_FILE),
+      vitePath: `${PluginConvention.URL_PREFIX}${d.name}/${PluginConvention.FRONTEND_FILE}`,
     }))
     .filter(c => existsSync(c.path));
 }

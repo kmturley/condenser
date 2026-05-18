@@ -1,7 +1,7 @@
 /// <reference lib="dom" />
 
 import { renderComponent } from './qam.js';
-import { MessageType } from '../../shared/protocol.js';
+import { MessageType, Route, WsEvent, Auth } from '../../shared/protocol.js';
 
 export function callPlugin(route: string, params?: unknown): Promise<any> {
   const condenser = (window as any).__condenser;
@@ -49,9 +49,9 @@ export function initPluginLoader(): void {
   const connect = async () => {
     let token: string;
     try {
-      const res = await fetch(`${httpUrl}/auth/token`);
+      const res = await fetch(`${httpUrl}${Auth.ENDPOINT}`);
       const json = await res.json();
-      token = json.token;
+      token = json[Auth.TOKEN_KEY];
       condenser.core.csrfToken = token;
     } catch (e: any) {
       console.error('[condenser] Failed to fetch auth token:', e.message);
@@ -59,7 +59,7 @@ export function initPluginLoader(): void {
       return;
     }
 
-    const ws = new WebSocket(`${wsUrl}?auth=${token}`);
+    const ws = new WebSocket(`${wsUrl}?${Auth.QUERY_PARAM}=${token}`);
     condenser.core.ws = ws;
 
     ws.onerror = () => {
@@ -68,7 +68,7 @@ export function initPluginLoader(): void {
     };
 
     ws.onopen = async () => {
-      const plugins = await callPlugin('get-plugins');
+      const plugins = await callPlugin(Route.GET_PLUGINS);
       if (Array.isArray(plugins)) {
         for (const { id, url } of plugins) {
           await loadPlugin(id, url);
@@ -85,7 +85,7 @@ export function initPluginLoader(): void {
           msg.error ? pending.reject(new Error(msg.error)) : pending.resolve(msg.result);
         }
       }
-      if (msg.type === MessageType.EVENT && msg.event === 'plugin-updated') {
+      if (msg.type === MessageType.EVENT && msg.event === WsEvent.PLUGIN_UPDATED) {
         await loadPlugin(msg.id, msg.url);
       }
     };

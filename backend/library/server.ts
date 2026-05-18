@@ -6,6 +6,7 @@ import { createServer as createHttpsServer } from 'https';
 import { createServer as createHttpServer, IncomingMessage, ServerResponse } from 'http';
 import { createLogger } from '../../shared/logger.js';
 import { getRuntimeConfig, getTlsOptions, Mode } from '../../shared/runtime.js';
+import { Route, Auth } from '../../shared/protocol.js';
 import { discoverPlugins } from './plugins.js';
 import { WsRouter } from './ws-router.js';
 import { loadPlugins } from './plugin-loader.js';
@@ -26,7 +27,7 @@ export async function startServer(mode: Mode) {
   const clients = new Set<WebSocket>();
   const router = new WsRouter();
 
-  router.register('get-plugins', () =>
+  router.register(Route.GET_PLUGINS, () =>
     discoverPlugins().map(c => ({
       id: c.id,
       url: config.isProduction
@@ -38,9 +39,9 @@ export async function startServer(mode: Mode) {
   await loadPlugins(router, clients);
 
   const handleRequest = (req: IncomingMessage, res: ServerResponse) => {
-    if (req.url === '/auth/token') {
+    if (req.url === Auth.ENDPOINT) {
       res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
-      res.end(JSON.stringify({ token: csrfToken }));
+      res.end(JSON.stringify({ [Auth.TOKEN_KEY]: csrfToken }));
       return;
     }
 
@@ -78,7 +79,7 @@ export async function startServer(mode: Mode) {
     }
 
     const url = new URL(request.url ?? '/', 'http://localhost');
-    if (url.searchParams.get('auth') !== csrfToken) {
+    if (url.searchParams.get(Auth.QUERY_PARAM) !== csrfToken) {
       logger.warn('Rejected websocket connection: invalid auth token');
       ws.close(1008, 'Unauthorized');
       return;

@@ -4,6 +4,7 @@ import { existsSync, readdirSync } from 'fs';
 import WebSocket from 'ws';
 import { WsRouter, broadcastEvent } from './ws-router.js';
 import { pluginsDir } from './plugins.js';
+import { PluginConvention } from '../../shared/plugin.js';
 
 export interface BackendAPI {
   emit(event: string, data?: Record<string, unknown>): void;
@@ -21,7 +22,7 @@ export async function loadPlugins(router: WsRouter, clients: Set<WebSocket>): Pr
   if (!existsSync(pluginsDir)) return;
   for (const d of readdirSync(pluginsDir, { withFileTypes: true })) {
     if (!d.isDirectory()) continue;
-    const backendPath = path.join(pluginsDir, d.name, 'backend.ts');
+    const backendPath = path.join(pluginsDir, d.name, PluginConvention.BACKEND_FILE);
     if (!existsSync(backendPath)) continue;
     await loadPlugin(d.name, backendPath, router, clients);
   }
