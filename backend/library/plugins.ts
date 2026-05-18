@@ -10,7 +10,7 @@ export interface PluginEntry {
   vitePath: string;
 }
 
-export const pluginsDir: string = path.join(__dirname, '..', 'plugins');
+export const pluginsDir: string = path.join(__dirname, '..', '..', 'plugins');
 
 export function discoverPlugins(): PluginEntry[] {
   if (!existsSync(pluginsDir)) return [];

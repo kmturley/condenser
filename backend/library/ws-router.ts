@@ -1,11 +1,7 @@
 import WebSocket from 'ws';
+import { MessageType } from '../../shared/protocol.js';
 
-export const MessageType = {
-  CALL: 0,
-  REPLY: 1,
-  // 2 is intentionally reserved for future use
-  EVENT: 3,
-} as const;
+export { MessageType };
 
 type Handler = (params: unknown, ws: WebSocket) => Promise<unknown> | unknown;
 

@@ -1,6 +1,7 @@
 /// <reference lib="dom" />
 
 import { renderComponent } from './qam.js';
+import { MessageType } from '../../shared/protocol.js';
 
 export function callPlugin(route: string, params?: unknown): Promise<any> {
   const condenser = (window as any).__condenser;
@@ -14,7 +15,7 @@ export function callPlugin(route: string, params?: unknown): Promise<any> {
     condenser.core.callSeq ??= 0;
     const id = ++condenser.core.callSeq;
     condenser.core.pendingCalls.set(id, { resolve, reject });
-    ws.send(JSON.stringify({ type: 0, route, id, params }));
+    ws.send(JSON.stringify({ type: MessageType.CALL, route, id, params }));
   });
 }
 
@@ -77,14 +78,14 @@ export function initPluginLoader(): void {
 
     ws.onmessage = async (event: MessageEvent) => {
       const msg = JSON.parse(event.data);
-      if (msg.type === 1) {
+      if (msg.type === MessageType.REPLY) {
         const pending = condenser.core.pendingCalls?.get(msg.id);
         if (pending) {
           condenser.core.pendingCalls.delete(msg.id);
           msg.error ? pending.reject(new Error(msg.error)) : pending.resolve(msg.result);
         }
       }
-      if (msg.type === 3 && msg.event === 'plugin-updated') {
+      if (msg.type === MessageType.EVENT && msg.event === 'plugin-updated') {
         await loadPlugin(msg.id, msg.url);
       }
     };
